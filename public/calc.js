@@ -212,3 +212,11 @@ export function rateDirection(series, days = 90, threshold = 0.5) {
 export function percentileOf(series, value) {
   return series.filter((p) => p.value <= value).length / series.length;
 }
+
+/**
+ * What `amount` held in `held` is worth in TRY, USD and EUR at the end rates, after spread and purchase tax.
+ * The value in the held currency is the amount itself.
+ */
+export function equivalents(amount, held, end, spreadPct, fxBuyTaxPct = 0) {
+  return Object.fromEntries(["TRY", "USD", "EUR"].map((c) => [c, convert(amount, held, c, end, spreadPct, fxBuyTaxPct)]));
+}

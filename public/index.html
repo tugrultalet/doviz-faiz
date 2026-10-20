@@ -27,31 +27,35 @@
     <p class="error" id="error" hidden></p>
 
     <form id="form" class="card inputs" autocomplete="off">
-      <label>Tutar
-        <span class="row">
-          <input id="amount" type="number" min="0" step="any" value="1000000" inputmode="decimal" />
-          <select id="currency" aria-label="Para birimi">
-            <option value="TRY">TL</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </span>
-      </label>
-      <label>Vade (gün)
-        <input id="days" type="number" min="1" max="365" value="32" inputmode="numeric" />
-      </label>
-      <label>TL mevduat faizi (%)
-        <input id="tlRate" type="number" step="0.01" min="0" inputmode="decimal" />
-        <span class="hint" id="tlRateHint"></span>
-      </label>
-      <label>Dolar mevduat faizi (%)
-        <input id="usdRate" type="number" step="0.01" min="0" inputmode="decimal" />
-        <span class="hint" id="usdRateHint"></span>
-      </label>
-      <label>Euro mevduat faizi (%)
-        <input id="eurRate" type="number" step="0.01" min="0" inputmode="decimal" />
-        <span class="hint" id="eurRateHint"></span>
-      </label>
+      <div class="main-row">
+        <label class="big-field">Tutar
+          <span class="row">
+            <input id="amount" type="number" min="0" step="any" value="1000000" inputmode="decimal" />
+            <select id="currency" aria-label="Para birimi">
+              <option value="TRY">TL</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+          </span>
+        </label>
+        <label class="big-field">Vade (gün)
+          <input id="days" type="number" min="1" max="365" value="32" inputmode="numeric" />
+        </label>
+      </div>
+      <div class="rate-row">
+        <label>TL mevduat faizi (%)
+          <input id="tlRate" type="number" step="0.01" min="0" inputmode="decimal" />
+          <span class="hint" id="tlRateHint"></span>
+        </label>
+        <label>Dolar mevduat faizi (%)
+          <input id="usdRate" type="number" step="0.01" min="0" inputmode="decimal" />
+          <span class="hint" id="usdRateHint"></span>
+        </label>
+        <label>Euro mevduat faizi (%)
+          <input id="eurRate" type="number" step="0.01" min="0" inputmode="decimal" />
+          <span class="hint" id="eurRateHint"></span>
+        </label>
+      </div>
     </form>
 
     <section id="result" aria-live="polite"></section>
@@ -129,10 +133,6 @@
         <label>Aylık enflasyon (%)
           <input data-setting="inflation" type="number" step="0.01" />
           <span class="hint" data-hint="inflation"></span>
-        </label>
-        <label>Yıl sonu USD/TRY beklentisi
-          <input data-setting="expUsd" type="number" step="0.01" min="0" />
-          <span class="hint">Doluysa "Piyasa beklentisi" senaryosu eklenir.</span>
         </label>
         <label>Tahvil / bono faizi (%)
           <input data-setting="bondRate" type="number" step="0.01" min="0" />

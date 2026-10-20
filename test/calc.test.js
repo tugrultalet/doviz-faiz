@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  equivalents,
   roundTrip,
   terms,
   breakEvenRate,
@@ -295,5 +296,21 @@ describe("terms", () => {
   it("uses separate USD and EUR rates with fxRate as fallback", () => {
     expect(terms({ usdRate: 4, eurRate: 2, fxStopaj: 25 }, "EUR")).toEqual([2, 25]);
     expect(terms({ fxRate: 3, fxStopaj: 25 }, "USD")).toEqual([3, 25]);
+  });
+});
+
+describe("equivalents", () => {
+  it("values a holding in all three currencies, matching the round trip result", () => {
+    const input = {
+      amount: 1_000_000, currency: "TRY", days: 32, tlRate: 39.4, tlStopaj: 17.5,
+      usdRate: 1, eurRate: 0.5, fxStopaj: 25, spread: 0.2, fxBuyTax: 0.2, now: { USD: 49.5, EUR: 57.6 },
+    };
+    const end = { USD: 50.4, EUR: 58.1 };
+    const t = roundTrip(input, end, "USD");
+    const eq = equivalents(t.atMaturity, "USD", end, input.spread, input.fxBuyTax);
+    expect(eq.USD).toBe(t.atMaturity);
+    expect(eq.TRY).toBeCloseTo(t.final, 6); // back in the input currency = the trip's result
+    expect(eq.TRY).toBeCloseTo(t.atMaturity * 50.4 * (1 - 0.001), 6);
+    expect(eq.EUR).toBeCloseTo((t.atMaturity * 50.4 * 0.999) / 1.002 / (58.1 * 1.001), 6);
   });
 });

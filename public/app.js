@@ -2,11 +2,10 @@ import {
   breakEvenRate,
   changeOver,
   compareOptions,
-  daysUntilYearEnd,
   inflationStats,
   percentileOf,
   projectRate,
-  projectToTarget,
+  equivalents,
   rateDirection,
   tlStopajForDays,
   trendStats,
@@ -85,10 +84,6 @@ function autoSetting(key) {
       return inf
         ? { value: Number((inf.monthly * 100).toFixed(2)), hint: `Son TÜFE (${fmtDate(inf.date).slice(3)}). Reel getiri için kullanılır.` }
         : { value: null, hint: "Boşsa reel getiri gösterilmez." };
-    }
-    case "expUsd": {
-      const exp = pointsOf("expUsdYearEnd")?.at(-1);
-      return { value: exp ? Number(exp.value.toFixed(2)) : null };
     }
     case "bondRate": {
       const bond = pointsOf("bondYield")?.at(-1);
@@ -435,7 +430,6 @@ function readInput() {
     fxBuyTax: setting("fxBuyTax") ?? 0,
     spread: setting("spread") ?? FALLBACK_SPREAD,
     monthlyInflation: setting("inflation"),
-    expUsd: setting("expUsd"),
     bondRate: bondRate > 0 ? bondRate : null,
   };
 }
@@ -448,12 +442,6 @@ function buildScenarios(input, now) {
     { short: "1 yıllık trend", title: "Kur 1 yıllık trendle giderse", end: trend("dailyGrowthYear") },
     { short: "Son 30 gün trendi", title: "Kur son 30 günlük trendle giderse", end: trend("dailyGrowthMonth") },
   ];
-  if (input.expUsd > 0) {
-    // Survey gives only USD/TRY; EUR follows it at today's EUR/USD parity.
-    const usd = projectToTarget(now.USD, input.expUsd, daysUntilYearEnd(stats.USD.current.date), input.days);
-    scenarios.push({ short: "Piyasa beklentisi", title: "Piyasa beklentisi gerçekleşirse", end: { USD: usd, EUR: (usd * now.EUR) / now.USD } });
-  }
-  scenarios.push({ short: "Kur sabit", title: "Kur sabit kalırsa", end: { ...now } });
   for (const sc of scenarios) {
     sc.result = compareOptions({ ...input, now, end: sc.end });
     sc.ranking = Object.entries(sc.result)
@@ -503,9 +491,7 @@ function render() {
     })
     .join("");
 
-  const others = scenarios
-    .map((s, i) => (i === scenarioIndex ? "" : `<li>${s.short}: <strong>${OPTION_LABELS[s.ranking[0]]}</strong></li>`))
-    .join("");
+  const other = scenarios[1 - scenarioIndex];
 
   $("result").innerHTML = `
     <div class="card result-card">
@@ -518,7 +504,7 @@ function render() {
       </div>
       <ul class="options">${options}</ul>
       <p class="muted small">Ayrıntı için bir seçeneğe tıklayın. Makas, kambiyo vergisi ve stopaj düşülmüştür.</p>
-      <div class="others"><span class="muted small">Diğer senaryolarda en iyisi:</span><ul>${others}</ul></div>
+      <p class="small others">${other.short} senaryosunda en iyisi: <strong>${OPTION_LABELS[other.ranking[0]]}</strong></p>
       ${breakEvenNote(input, now)}
       ${rateNote()}
     </div>`;
@@ -544,20 +530,22 @@ function stepsTable(opt, input, sc) {
   rows.push(
     [`Faiz (%${nf(2).format(t.rate)}, ${input.days} gün)`, `+${money(t.grossInterest, held)}`],
     [`Stopaj (%${nf(1).format(t.stopaj)})`, t.stopajAmount > 0 ? `−${money(t.stopajAmount, held)}` : "–"],
-    ["Vade sonu", money(t.atMaturity, held)],
+    [`Vade sonu (${SYMBOL[held]})`, money(t.atMaturity, held)],
   );
-  if (held !== cur) {
-    const fx = cur === "TRY" ? held : cur;
-    const backLabel =
-      held === "TRY" ? `${cur} alış kuru (vade sonu tahmini)` : cur === "TRY" ? `${held} bozdurma kuru (vade sonu tahmini)` : `${held} → ${cur} çevrim oranı`;
-    rows.push(
-      [`${fx}/TRY tahmini`, fmtRate(sc.end[fx])],
-      [backLabel, fmtRate(t.back.rate)],
-      ["Makas + kambiyo vergisi", cost(t.back.spreadCostTl + t.back.taxTl)],
-    );
+  rows.push([`USD/TRY tahmini (vade sonu)`, fmtRate(sc.end.USD)], [`EUR/TRY tahmini (vade sonu)`, fmtRate(sc.end.EUR)]);
+  const eq = equivalents(t.atMaturity, held, sc.end, input.spread, input.fxBuyTax);
+  rows.push({ section: "Vade sonunda karşılıkları" });
+  for (const c of ["TRY", "USD", "EUR"]) {
+    const note = c === held ? "" : " (çevrilirse)";
+    rows.push({ equiv: true, main: c === cur, label: `${SYMBOL[c]}${note}`, value: money(eq[c], c) });
   }
-  rows.push(["Elinize geçen", `<strong>${money(t.final, cur)}</strong>`]);
-  return `<table class="steps">${rows.map(([l, v]) => `<tr><th scope="row">${l}</th><td>${v}</td></tr>`).join("")}</table>`;
+  const tr = (r) =>
+    Array.isArray(r)
+      ? `<tr><th scope="row">${r[0]}</th><td>${r[1]}</td></tr>`
+      : r.section
+        ? `<tr class="section"><th scope="row" colspan="2">${r.section}</th></tr>`
+        : `<tr class="equiv${r.main ? " main" : ""}"><th scope="row">${r.label}</th><td>${r.value}</td></tr>`;
+  return `<table class="steps">${rows.map(tr).join("")}</table>`;
 }
 
 function breakEvenNote(input, now) {
