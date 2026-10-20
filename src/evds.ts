@@ -61,6 +61,8 @@ export async function discoverSeries(key: string, queries: [string, string][], l
           lower(s.SERIE_NAME).includes(lower(seriesWord)),
         );
         for (const s of series.slice(0, seriesWord ? 8 : 40)) log(`[evds-discover]     ${s.SERIE_CODE} | ${s.SERIE_NAME}`);
+        // Full metadata of the first match, to see fields such as the unit.
+        if (series[0]) log(`[evds-discover]     meta ${JSON.stringify(series[0])}`);
       } catch (err) {
         log(`[evds-discover]     series list failed: ${(err as Error).message}`);
       }

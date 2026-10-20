@@ -21,9 +21,8 @@ if (key) {
     }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Mevduat Faiz Oranları (Akım)", ""],
-        ["Beklenti Anketi", ""],
-        ["Döviz Kurları", "Satış"],
+        ["Mevduat (Kurumsal Sektörlere Göre)", "Yurt İçi Yerleşik Özel Sektorun Döviz Tevdiat"],
+        ["Merkez Bankası Rezervleri", "Toplam"],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();
