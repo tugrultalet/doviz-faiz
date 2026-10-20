@@ -155,7 +155,7 @@ function renderIndicators(available) {
   );
 
   for (const [id, title] of [
-    ["reserves", "TCMB brüt rezervleri"],
+    ["reserves", "TCMB rezervleri (milyon USD)"],
     ["fxDeposits", "Yerleşiklerin döviz mevduatı"],
   ]) {
     const pts = pointsOf(id);

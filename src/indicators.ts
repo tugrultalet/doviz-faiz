@@ -18,12 +18,12 @@ type Def = { label: string; code: string; rangeDays: number };
 const env = (id: string, fallback: string) => process.env[`EVDS_${id.toUpperCase()}`] ?? fallback;
 
 export const INDICATORS: Record<IndicatorId, Def> = {
-  cpi: { label: "TÜFE (2003=100)", code: env("cpi", "TP.FG.J0"), rangeDays: 500 },
+  cpi: { label: "TÜFE (2025=100)", code: env("cpi", "TP.TUKFIY2025.GENEL"), rangeDays: 500 },
   fundingCost: { label: "TCMB ağırlıklı ortalama fonlama maliyeti (%)", code: env("fundingCost", "TP.APIFON4"), rangeDays: 200 },
   expUsdYearEnd: { label: "Piyasa katılımcıları: yıl sonu USD/TRY beklentisi", code: env("expUsdYearEnd", ""), rangeDays: 400 },
-  hhInflationExp: { label: "Hanehalkı 12 ay sonrası enflasyon beklentisi (%)", code: env("hhInflationExp", ""), rangeDays: 400 },
+  hhInflationExp: { label: "Hanehalkı 12 ay sonrası enflasyon beklentisi (%)", code: env("hhInflationExp", "TP.ENFBEK.HBA12ENF"), rangeDays: 400 },
   reer: { label: "TÜFE bazlı reel efektif döviz kuru (2003=100)", code: env("reer", "TP.RK.T1.Y"), rangeDays: 3650 },
-  reserves: { label: "TCMB brüt döviz rezervleri", code: env("reserves", ""), rangeDays: 400 },
+  reserves: { label: "TCMB toplam rezervleri (milyon USD)", code: env("reserves", "TP.AB.TOPLAM"), rangeDays: 400 },
   fxDeposits: { label: "Yurt içi yerleşiklerin döviz mevduatı", code: env("fxDeposits", ""), rangeDays: 400 },
   bondYield: { label: "Devlet tahvili / bono faizi (%)", code: env("bondYield", ""), rangeDays: 120 },
 };

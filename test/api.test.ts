@@ -83,25 +83,26 @@ describe("/api/indicators", () => {
   it("marks every indicator as no-key without a key", async () => {
     const body = await (await createApp("").request("/api/indicators")).json();
     expect(body.available).toBe(false);
-    expect(body.indicators.cpi).toMatchObject({ series: "TP.FG.J0", error: "no-key" });
+    expect(body.indicators.cpi).toMatchObject({ series: "TP.TUKFIY2025.GENEL", error: "no-key" });
   });
 
   it("parses monthly EVDS dates and reports unconfigured and failing series", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
-        if (url.includes("TP.FG.J0")) return json({ items: [{ Tarih: "2026-8", TP_FG_J0: "3000" }, { Tarih: "2026-9", TP_FG_J0: "3060" }] });
+        if (url.includes("TP.TUKFIY2025.GENEL")) return json({ items: [{ Tarih: "2026-8", TP_TUKFIY2025_GENEL: "130" }, { Tarih: "2026-9", TP_TUKFIY2025_GENEL: "132.6" }] });
         if (url.includes("TP.APIFON4")) return json({}, 500);
         return json({ items: [] });
       }),
     );
     const { indicators } = await (await createApp("k").request("/api/indicators")).json();
     expect(indicators.cpi.points).toEqual([
-      { date: "2026-08-01", value: 3000 },
-      { date: "2026-09-01", value: 3060 },
+      { date: "2026-08-01", value: 130 },
+      { date: "2026-09-01", value: 132.6 },
     ]);
     expect(indicators.fundingCost.error).toMatch(/EVDS 500/);
     expect(indicators.reer.error).toBe("empty");
     expect(indicators.expUsdYearEnd.error).toBe("not-configured");
+    expect(indicators.reserves.error).toBe("empty");
   });
 });
