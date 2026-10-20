@@ -139,3 +139,22 @@ describe("/api/gold", () => {
     ]);
   });
 });
+
+describe("/api/stats", () => {
+  it("returns every chart definition with data, keeping failures per chart", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => {
+        if (url.includes("TP.TG2.Y01")) return json({ items: [{ Tarih: "2026-8", TP_TG2_Y01: "84.1" }] });
+        if (url.includes("TP.TIG08")) return json({}, 500);
+        return json({ items: [] });
+      }),
+    );
+    const { charts } = await (await createApp("k").request("/api/stats")).json();
+    const conf = charts.find((c: { id: string }) => c.id === "consumer-confidence");
+    expect(conf.title).toBe("Tüketici güven endeksi");
+    expect(conf.reference.value).toBe(100);
+    expect(conf.series[0].points.at(-1)).toEqual({ date: "2026-08-01", value: 84.1 });
+    expect(charts.find((c: { id: string }) => c.id === "unemployment").error).toMatch(/EVDS 500/);
+  });
+});

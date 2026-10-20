@@ -4,6 +4,7 @@ import { discoverSeries } from "./evds.js";
 import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
+import { fetchStats } from "./stats.js";
 
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: createApp().fetch, port }, () => console.log(`http://localhost:${port}`));
@@ -25,18 +26,14 @@ if (key) {
       "[evds-check] gold",
       typeof gold === "string" ? gold : `${JSON.stringify(gold?.series)}: ${gold?.points.length} months, first ${JSON.stringify(gold?.points[0])}, last ${JSON.stringify(gold?.points.at(-1))}`,
     );
+    for (const r of (await fetchStats(key).catch(() => null)) ?? []) {
+      const info = r.error ?? r.series.map((x) => `${x.label}: ${x.points.length} pts, last ${JSON.stringify(x.points.at(-1))}`).join(" | ");
+      console.log(`[evds-check] stats ${r.id}: ${info}`);
+    }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Kartlı Ödeme", ""],
-        ["Kredi Kart", ""],
-        ["Güven Endeksi", ""],
-        ["Sanayi Üretim", "Toplam"],
-        ["Kapasite Kullanım", ""],
-        ["Temel İşgücü Göstergeleri", "İşsizlik"],
-        ["Konut Fiyat", ""],
-        ["Ödemeler Dengesi", "Cari"],
-        ["Mevduat (Türlerine Göre)", ""],
-        ["Krediler - Mevduat Bankaları", "Toplam"],
+        ["Kripto", ""],
+        ["Kripto Varlık", ""],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();

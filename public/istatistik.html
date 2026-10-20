@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>İstatistik</title>
+  <script>
+    try {
+      const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      if (localStorage.getItem("doviz-faiz-sidebar-collapsed") === "1") document.documentElement.classList.add("sb-collapsed");
+    } catch {}
+    document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+    document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  </script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <div>
+        <h1>İstatistik</h1>
+        <p class="muted small" id="source">Türkiye ekonomisinin genel gidişatı · TCMB EVDS · Veriler yükleniyor…</p>
+      </div>
+    </header>
+
+    <p class="error" id="error" hidden></p>
+    <nav class="stat-jump" id="stat-jump" aria-label="Bölümler"></nav>
+    <div id="stat-sections"></div>
+
+    <footer class="muted small">
+      <p>Kaynak: TCMB EVDS (TÜİK, BKM ve TCMB verileri). Aylık ortalamalar. Grafikler bilgi amaçlıdır, yatırım tavsiyesi değildir.</p>
+    </footer>
+  </main>
+  <script type="module" src="istatistik.js"></script>
+</body>
+</html>

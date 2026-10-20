@@ -300,16 +300,6 @@ main > section:first-of-type h2 { margin-top: 8px; }
   #trend-cards .stats { font-size: 0.7rem; }
 }
 
-/* Header buttons (gold / FX page switch, settings) */
-.header-actions { display: flex; gap: 8px; align-items: center; flex: none; }
-a.icon-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--text-primary); text-decoration: none; }
-.icon-btn .ico { width: 18px; height: 18px; flex: none; }
-@media (max-width: 420px) {
-  .header-actions { gap: 6px; }
-  .header-actions .icon-btn { padding: 6px 10px; }
-  a.icon-btn span { display: none; }
-}
-
 /* Gold returns table */
 .returns { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 0.9rem; }
 .returns th, .returns td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: right; white-space: nowrap; }
@@ -324,13 +314,6 @@ a.icon-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--t
 .returns th .sub { display: block; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
 @media (max-width: 520px) { #gold-cards { grid-template-columns: 1fr 1fr; } #gold-cards .big { font-size: 1.15rem; } #gold-cards .card { padding: 10px; } }
 @media (max-width: 520px) { .tabs { gap: 6px; } .tabs button { padding: 8px 4px; font-size: 0.8rem; } }
-/* Theme-only settings on the gold page: a small dialog, not the full-height sheet. */
-@media (max-width: 520px) {
-  dialog.settings-small { height: fit-content; }
-  dialog.settings-small form { height: auto; }
-}
-dialog.settings-small p { margin: 14px 0 0; }
-dialog.settings-small .dialog-foot { margin-top: 16px !important; }
 
 /* ---- Sidebar (shadcn/ui Sidebar look) ---- */
 :root { --sb-w: 16rem; --sb-w-icon: 3.25rem; --sb-bg: #f7f6f2; --sb-accent: #ebe9e3; }
@@ -358,7 +341,7 @@ dialog.settings-small .dialog-foot { margin-top: 16px !important; }
 .sb-item.active { background: var(--sb-accent); color: var(--text-primary); font-weight: 600; }
 .sb-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .sb-ico { width: 16px; height: 16px; flex: none; }
-.sb-footer { padding: 8px; border-top: 1px solid var(--border); }
+.sb-footer { padding: 8px; border-top: 1px solid var(--border); display: grid; gap: 2px; }
 .sb-note { margin: 6px 8px 2px; font-size: 0.7rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; }
 
 /* Desktop: content sits right of the sidebar; collapsed shows icons only. */
@@ -373,8 +356,14 @@ dialog.settings-small .dialog-foot { margin-top: 16px !important; }
   .sb-collapsed .sb-collapse .sb-ico { transform: scaleX(-1); }
 }
 
-/* Navigation lives in the sidebar (desktop) and the tab bar (mobile), so header buttons are not needed. */
-.header-actions { display: none; }
+/* Settings: a gear button at the top right of the FX page, on desktop and mobile. */
+.gear-btn {
+  flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+}
+.gear-btn:hover { background: var(--surface-2); }
+.gear-btn .ico { width: 20px; height: 20px; transition: transform 0.3s ease; }
+.gear-btn:hover .ico { transform: rotate(45deg); }
 
 /* ---- Mobile tab bar: Apple "Liquid Glass" style ---- */
 .tabbar { display: none; }
@@ -433,3 +422,20 @@ dialog.settings-small .dialog-foot { margin-top: 16px !important; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tabbar { background: var(--surface-1) !important; }
 }
+
+/* Statistics page */
+.stat-jump { display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 6px; margin-top: 4px; scrollbar-width: none; }
+.stat-jump a {
+  flex: none; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface-1);
+  color: var(--text-secondary); font-size: 0.82rem; text-decoration: none; white-space: nowrap;
+}
+.stat-jump a:hover { color: var(--text-primary); background: var(--surface-2); }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; }
+.stat-grid > * { min-width: 0; }
+.stat-card h3 { font-size: 0.95rem; color: var(--text-primary); margin: 0; }
+.stat-explain { margin: 4px 0 8px; font-size: 0.8rem; line-height: 1.4; color: var(--text-muted); }
+.stat-latest { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-wrap: wrap; gap: 2px 14px; font-size: 0.82rem; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.stat-latest .swatch { width: 8px; height: 8px; margin-right: 5px; }
+.stat-chart { height: 210px; }
+section[id] { scroll-margin-top: 12px; }
+@media (max-width: 520px) { .stat-grid { grid-template-columns: 1fr; } .stat-chart { height: 190px; } }

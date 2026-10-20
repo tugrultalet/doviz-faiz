@@ -9,6 +9,7 @@ TL mevduat, dolar ve euro seçeneklerini karşılaştırır.
 - Başabaş kuru gösterir.
 - Piyasa göstergeleri (EVDS): TÜFE, TCMB fonlama faizi, yıl sonu USD/TRY beklentisi, hanehalkı enflasyon beklentisi, reel efektif kur, brüt rezervler, yerleşiklerin döviz mevduatı, tahvil faizi.
 - Altın sayfası (`/altin.html`): 1950'den bugüne aylık gram altın (TL) ve ons altın (USD), getiri tablosu ve grafikler (EVDS `TP.MK.KUL.YTL`, `TP.MK.LON.YTL`).
+- İstatistik sayfası (`/istatistik.html`): kart harcamaları, güven endeksleri, dolarizasyon, rezervler, faiz-enflasyon, sanayi, kapasite, işsizlik, cari denge ve konut fiyatları (tanımlar `src/stats.ts`).
 - Tahvil/bono seçeneği (stopaj %0), reel getiri (enflasyon sonrası) ve "piyasa beklentisi gerçekleşirse" senaryosu.
 
 ## Komutlar

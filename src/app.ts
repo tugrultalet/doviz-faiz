@@ -3,6 +3,7 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
+import { STAT_CHARTS, fetchStats } from "./stats.js";
 
 const TTL_MS = 60 * 60 * 1000;
 
@@ -23,6 +24,7 @@ export function createApp(key = process.env.EVDS_API_KEY) {
   const deposit = cached(() => fetchDepositRates(key));
   const indicators = cached(() => fetchIndicators(key));
   const gold = cached(() => fetchGold(key));
+  const stats = cached(() => fetchStats(key));
 
   app.get("/api/fx", async (c) => {
     try {
@@ -51,6 +53,18 @@ export function createApp(key = process.env.EVDS_API_KEY) {
       console.error(err);
       return c.json({ error: "Altın verisi alınamadı. Daha sonra tekrar deneyin." }, 502);
     }
+  });
+
+  // Chart definitions (titles, explanations) plus their data.
+  app.get("/api/stats", async (c) => {
+    const data = await stats();
+    if (!data) return c.json({ error: "İstatistik verisi yok. EVDS anahtarı gerekli." }, 503);
+    const byId = new Map(data.map((d) => [d.id, d]));
+    return c.json({
+      charts: STAT_CHARTS.map(({ id, section, title, explain, unit, transform, reference }) => ({
+        id, section, title, explain, unit, transform, reference, ...byId.get(id),
+      })),
+    });
   });
 
   app.get("/api/indicators", async (c) => c.json({ available: Boolean(key), indicators: await indicators() }));
