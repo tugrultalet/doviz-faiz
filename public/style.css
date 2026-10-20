@@ -324,3 +324,10 @@ a.icon-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--t
 .returns th .sub { display: block; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
 @media (max-width: 520px) { #gold-cards { grid-template-columns: 1fr 1fr; } #gold-cards .big { font-size: 1.15rem; } #gold-cards .card { padding: 10px; } }
 @media (max-width: 520px) { .tabs { gap: 6px; } .tabs button { padding: 8px 4px; font-size: 0.8rem; } }
+/* Theme-only settings on the gold page: a small dialog, not the full-height sheet. */
+@media (max-width: 520px) {
+  dialog.settings-small { height: fit-content; }
+  dialog.settings-small form { height: auto; }
+}
+dialog.settings-small p { margin: 14px 0 0; }
+dialog.settings-small .dialog-foot { margin-top: 16px !important; }

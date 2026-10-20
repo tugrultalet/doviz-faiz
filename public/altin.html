@@ -26,6 +26,7 @@
       </div>
       <div class="header-actions">
         <a href="/" class="icon-btn" aria-label="Döviz sayfasına dön" title="Döviz"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14.8 8.6c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2.1 0 3 5.8 1.6 5.8 4.7 0 1.3-1.3 2.2-3 2.2-1.3 0-2.5-.6-3-1.5M12 5.5v1.7M12 16.8v1.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Döviz</span></a>
+        <button type="button" class="icon-btn" id="open-settings">⚙ Ayarlar</button>
       </div>
     </header>
 
@@ -58,6 +59,26 @@
       <p>Kaynak: TCMB EVDS (Ankara Kuyumcular ve Saatçiler Odası). Gram: külçe altın satış fiyatı. Ons: Londra satış fiyatı. Aylık ortalamalar. Yatırım tavsiyesi değildir.</p>
     </footer>
   </main>
+  <dialog id="settings" class="settings-small" aria-labelledby="settings-title">
+    <form method="dialog" id="settings-form">
+      <header class="dialog-head">
+        <h2 id="settings-title">Ayarlar</h2>
+        <fieldset class="theme">
+          <legend class="visually-hidden">Tema</legend>
+          <label><input type="radio" name="theme" value="system" /> Sistem</label>
+          <label><input type="radio" name="theme" value="light" /> Açık</label>
+          <label><input type="radio" name="theme" value="dark" /> Koyu</label>
+        </fieldset>
+        <button type="submit" class="icon-btn close-btn" aria-label="Kapat">✕</button>
+      </header>
+      <p class="muted small">Vergi, kur makası ve faiz ayarları hesaplama sayfasındadır. <a href="/">Döviz sayfasına git</a>.</p>
+      <footer class="dialog-foot">
+        <span></span>
+        <button type="submit" class="primary-btn">Tamam</button>
+      </footer>
+    </form>
+  </dialog>
+
   <script type="module" src="altin.js"></script>
 </body>
 </html>

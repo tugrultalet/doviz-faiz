@@ -1,4 +1,5 @@
 import { monthsBetween, periodReturn } from "./calc.js";
+import { applyTheme, loadSettings, saveSettings, setupModal } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const nf = (digits) => new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -127,6 +128,19 @@ $("gold-range").addEventListener("click", (e) => {
   rangeMonths = Number(btn.dataset.months);
   renderRange();
   renderCharts();
+});
+
+// Settings: only the theme lives here; it is shared with the main page.
+const settings = loadSettings();
+setupModal($("open-settings"), $("settings"), () => {
+  for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === (settings.theme ?? "system");
+});
+$("settings-form").addEventListener("input", (e) => {
+  if (e.target.name !== "theme") return;
+  settings.theme = e.target.value === "system" ? undefined : e.target.value;
+  saveSettings(settings);
+  applyTheme(settings.theme);
+  if (points.length) renderCharts(); // charts read colors from CSS
 });
 
 load();

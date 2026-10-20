@@ -15,6 +15,7 @@ import {
   tlStopajForDays,
   trendStats,
 } from "./calc.js";
+import { applyTheme, loadSettings, saveSettings, setupModal } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const CURRENCIES = { USD: { label: "Dolar", color: "--series-usd" }, EUR: { label: "Euro", color: "--series-eur" } };
@@ -44,20 +45,8 @@ const touched = new Set();
 
 // ---- Settings (modal) -------------------------------------------------------
 // Saved values override the automatic ones. Stored per browser only.
-const STORE_KEY = "doviz-faiz-settings";
-let saved = {};
-try {
-  saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
-} catch {
-  saved = {};
-}
-function persist() {
-  try {
-    localStorage.setItem(STORE_KEY, JSON.stringify(saved));
-  } catch {
-    // private mode: settings live for this page view only
-  }
-}
+let saved = loadSettings();
+const persist = () => saveSettings(saved);
 
 /** Automatic value and its explanation for each setting. */
 function autoSetting(key) {
@@ -113,43 +102,17 @@ function fillSettingsForm() {
   for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === theme;
 }
 
-function applyTheme() {
-  const t = saved.theme;
-  if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
-  else delete document.documentElement.dataset.theme;
+function refreshTheme() {
+  applyTheme(saved.theme);
   if (fxData) renderCharts(fxData); // charts read colors from CSS
 }
 
-// iOS Safari ignores overflow:hidden on body, so pin the page with position:fixed while the modal is open.
-let lockedScrollY = 0;
-const blockScroll = (e) => e.preventDefault();
-function lockPage() {
-  lockedScrollY = window.scrollY;
-  document.documentElement.classList.add("modal-open");
-  Object.assign(document.body.style, { position: "fixed", top: `-${lockedScrollY}px`, left: "0", right: "0", width: "100%" });
-  document.addEventListener("touchmove", blockScroll, { passive: false });
-}
-function unlockPage() {
-  document.documentElement.classList.remove("modal-open");
-  Object.assign(document.body.style, { position: "", top: "", left: "", right: "", width: "" });
-  document.removeEventListener("touchmove", blockScroll);
-  window.scrollTo(0, lockedScrollY);
-}
-
-$("open-settings").addEventListener("click", () => {
-  fillSettingsForm();
-  lockPage();
-  $("settings").showModal();
-});
-$("settings").addEventListener("close", unlockPage);
-$("settings").addEventListener("click", (e) => {
-  if (e.target === $("settings")) $("settings").close(); // click on backdrop
-});
+setupModal($("open-settings"), $("settings"), fillSettingsForm);
 $("settings-form").addEventListener("input", (e) => {
   const t = e.target;
   if (t.name === "theme") {
     saved.theme = t.value === "system" ? undefined : t.value;
-    applyTheme();
+    refreshTheme();
   } else if (t.dataset.setting) {
     saved[t.dataset.setting] = t.value === "" ? null : Number(t.value);
     t.classList.add("overridden");
