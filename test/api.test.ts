@@ -62,21 +62,23 @@ describe("/api/deposit-rate", () => {
     expect(body).toEqual({ available: false, rates: null });
   });
 
-  it("returns the latest value of each deposit series", async () => {
+  it("returns the latest savings deposit rate per currency and term", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
         json({
           items: [
-            { Tarih: "03-10-2026", TP_TRY_MT02: "39.1", TP_TRY_MT03: "40.2" },
-            { Tarih: "10-10-2026", TP_TRY_MT02: "38.9", TP_TRY_MT03: null },
+            { Tarih: "03-10-2026", TP_TRYTAS_MT01: "44.1", TP_TRYTAS_MT02: "42.5", TP_USDTAS_MT02: "1.9" },
+            { Tarih: "10-10-2026", TP_TRYTAS_MT01: "43.9", TP_TRYTAS_MT02: null, TP_USDTAS_MT02: "1.8" },
           ],
         }),
       ),
     );
-    const body = await (await createApp("k").request("/api/deposit-rate")).json();
-    expect(body.rates.upTo1Month).toEqual({ series: "TP.TRY.MT02", date: "2026-10-10", rate: 38.9 });
-    expect(body.rates.upTo3Months).toEqual({ series: "TP.TRY.MT03", date: "2026-10-03", rate: 40.2 });
+    const { rates } = await (await createApp("k").request("/api/deposit-rate")).json();
+    expect(rates.TRY.upTo1Month).toMatchObject({ series: "TP.TRYTAS.MT01", date: "2026-10-10", rate: 43.9 });
+    expect(rates.TRY.upTo3Months).toMatchObject({ series: "TP.TRYTAS.MT02", date: "2026-10-03", rate: 42.5 });
+    expect(rates.USD.upTo3Months.rate).toBe(1.8);
+    expect(rates.EUR.upTo3Months.rate).toBeUndefined();
   });
 });
 

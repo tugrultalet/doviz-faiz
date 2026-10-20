@@ -24,8 +24,7 @@ npm run typecheck
 | Değişken | Açıklama |
 |---|---|
 | `EVDS_API_KEY` | EVDS API anahtarı (evds3.tcmb.gov.tr → Benim Sayfam → Profilim → API KEY KOPYALA) |
-| `EVDS_DEPOSIT_1M` | 1 aya kadar vadeli TL mevduat faizi seri kodu (varsayılan `TP.TRY.MT02`) |
-| `EVDS_DEPOSIT_3M` | 3 aya kadar vadeli TL mevduat faizi seri kodu (varsayılan `TP.TRY.MT03`) |
+| `EVDS_DEPOSIT_<CUR>_<MTxx>` | Mevduat faizi seri kodu. Varsayılan `TP.<CUR>TAS.MTxx` (tasarruf mevduatı; MT01=1 aya kadar … MT05=1 yıldan uzun) |
 | `EVDS_CPI`, `EVDS_FUNDINGCOST`, `EVDS_EXPUSDYEAREND`, `EVDS_HHINFLATIONEXP`, `EVDS_REER`, `EVDS_RESERVES`, `EVDS_FXDEPOSITS`, `EVDS_BONDYIELD` | Gösterge seri kodları (varsayılanlar `src/indicators.ts` içinde). Boş kod: değer sayfada elle girilir. |
 | `EVDS_DISCOVER` | `1` ise sunucu açılışta EVDS veri gruplarını arar ve seri kodlarını loga yazar. |
 

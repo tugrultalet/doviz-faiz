@@ -4,108 +4,149 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Döviz mi Faiz mi</title>
+  <script>
+    // Apply the saved theme before first paint.
+    try {
+      const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch {}
+  </script>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
   <main>
-    <header>
-      <h1>Döviz mi, faiz mi?</h1>
-      <p class="muted" id="source">Veriler yükleniyor…</p>
+    <header class="top">
+      <div>
+        <h1>Döviz mi, faiz mi?</h1>
+        <p class="muted small" id="source">Veriler yükleniyor…</p>
+      </div>
+      <button type="button" class="icon-btn" id="open-settings">⚙ Ayarlar</button>
     </header>
 
     <p class="error" id="error" hidden></p>
 
+    <form id="form" class="card inputs" autocomplete="off">
+      <label>Tutar
+        <span class="row">
+          <input id="amount" type="number" min="0" step="any" value="1000000" inputmode="decimal" />
+          <select id="currency" aria-label="Para birimi">
+            <option value="TRY">TL</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </span>
+      </label>
+      <label>Vade (gün)
+        <input id="days" type="number" min="1" max="365" value="32" inputmode="numeric" />
+      </label>
+      <label>TL mevduat faizi (%)
+        <input id="tlRate" type="number" step="0.01" min="0" inputmode="decimal" />
+        <span class="hint" id="tlRateHint"></span>
+      </label>
+      <label>Dolar mevduat faizi (%)
+        <input id="usdRate" type="number" step="0.01" min="0" inputmode="decimal" />
+        <span class="hint" id="usdRateHint"></span>
+      </label>
+      <label>Euro mevduat faizi (%)
+        <input id="eurRate" type="number" step="0.01" min="0" inputmode="decimal" />
+        <span class="hint" id="eurRateHint"></span>
+      </label>
+    </form>
+
+    <section id="result" aria-live="polite"></section>
+
     <section>
       <h2>Kur trendi</h2>
       <div class="cards" id="trend-cards"></div>
-      <div class="chart-box">
+      <details class="card charts">
+        <summary>Grafikleri göster</summary>
         <h3>Son 1 yıl kur (TL)</h3>
         <div class="chart"><canvas id="rate-chart" aria-label="Son 1 yıl USD ve EUR kuru"></canvas></div>
-      </div>
-      <div class="chart-box">
         <h3>30 günlük dönemlerde artış (%)</h3>
-        <p class="muted small">En sağdaki çubuk son 30 gündür.</p>
         <div class="chart"><canvas id="month-chart" aria-label="30 günlük dönemlerde kur artışı"></canvas></div>
-      </div>
+      </details>
     </section>
 
     <section>
       <h2>Piyasa göstergeleri</h2>
-      <p class="muted small" id="indicator-note"></p>
       <div class="tiles" id="indicator-tiles"></div>
-    </section>
-
-    <section>
-      <h2>Hesaplama</h2>
-      <form id="form" class="form">
-        <label>Tutar
-          <span class="row">
-            <input id="amount" type="number" min="0" step="any" value="1000000" inputmode="decimal" />
-            <select id="currency">
-              <option value="TRY">TL</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </span>
-        </label>
-        <label>Vade (gün)
-          <input id="days" type="number" min="1" max="365" value="32" />
-        </label>
-        <label>TL mevduat faizi (yıllık %)
-          <input id="tlRate" type="number" step="0.01" min="0" />
-          <span class="hint" id="tlRateHint">Elle girin.</span>
-        </label>
-        <label>TL stopaj (%)
-          <input id="tlStopaj" type="number" step="0.5" min="0" max="100" />
-          <span class="hint">Vadeye göre otomatik dolar. Değiştirebilirsiniz.</span>
-        </label>
-        <label>Dolar mevduat faizi (yıllık %)
-          <input id="usdRate" type="number" step="0.01" min="0" value="0" />
-          <span class="hint">Bankanızın USD vadeli oranı. Vadesiz ise 0.</span>
-        </label>
-        <label>Euro mevduat faizi (yıllık %)
-          <input id="eurRate" type="number" step="0.01" min="0" value="0" />
-          <span class="hint">Bankanızın EUR vadeli oranı. Vadesiz ise 0.</span>
-        </label>
-        <label>Döviz stopaj (%)
-          <input id="fxStopaj" type="number" step="0.5" min="0" max="100" value="25" />
-          <span class="hint">Bankanızdan teyit edin.</span>
-        </label>
-        <label>Aylık enflasyon (%)
-          <input id="inflation" type="number" step="0.01" />
-          <span class="hint" id="inflationHint">Reel getiri için. Boş bırakılırsa hesaplanmaz.</span>
-        </label>
-        <label>Yıl sonu USD/TRY beklentisi
-          <input id="expUsd" type="number" step="0.01" min="0" />
-          <span class="hint" id="expUsdHint">Piyasa beklentisi senaryosu için. Boş bırakılırsa gösterilmez.</span>
-        </label>
-        <label>Devlet tahvili / bono faizi (yıllık %)
-          <input id="bondRate" type="number" step="0.01" min="0" />
-          <span class="hint" id="bondRateHint">Boş bırakılırsa tahvil seçeneği gösterilmez.</span>
-        </label>
-        <label>Tahvil stopaj (%)
-          <input id="bondStopaj" type="number" step="0.5" min="0" max="100" value="0" />
-          <span class="hint">DİBS faizinde stopaj %0 (31.12.2026'ya kadar).</span>
-        </label>
-        <label>Kambiyo vergisi (%)
-          <input id="fxBuyTax" type="number" step="0.01" min="0" value="0.2" />
-          <span class="hint">Döviz alırken ödenir (BSMV). Güncel oran binde 2. Bankanızdan teyit edin.</span>
-        </label>
-        <label>Kur makası (alış–satış farkı %)
-          <input id="spread" type="number" step="0.1" min="0" value="1" />
-          <span class="hint">Her TL↔döviz çevriminde yarısı kesilir.</span>
-        </label>
-      </form>
-
-      <div id="results"></div>
     </section>
 
     <footer class="muted small">
       <p>Bu sayfa bir karşılaştırma aracıdır, yatırım tavsiyesi değildir. Geçmiş kur trendi gelecekteki kuru garanti etmez.</p>
-      <p>Faiz basit faizdir (gün/365). TL stopaj: 6 aya kadar %17,5, 1 yıla kadar %15, 1 yıldan uzun %10 (31.12.2026'ya kadar geçerli).</p>
     </footer>
   </main>
+
+  <dialog id="settings" aria-labelledby="settings-title">
+    <form method="dialog" id="settings-form">
+      <header class="dialog-head">
+        <h2 id="settings-title">Ayarlar</h2>
+        <button type="submit" class="icon-btn" aria-label="Kapat">✕</button>
+      </header>
+
+      <fieldset class="theme">
+        <legend>Tema</legend>
+        <label><input type="radio" name="theme" value="system" /> Sistem</label>
+        <label><input type="radio" name="theme" value="light" /> Açık</label>
+        <label><input type="radio" name="theme" value="dark" /> Koyu</label>
+      </fieldset>
+
+      <h3>Vergiler</h3>
+      <div class="settings-grid">
+        <label>TL stopaj (%)
+          <input data-setting="tlStopaj" type="number" step="0.5" min="0" max="100" />
+          <span class="hint" data-hint="tlStopaj"></span>
+        </label>
+        <label>Döviz stopaj (%)
+          <input data-setting="fxStopaj" type="number" step="0.5" min="0" max="100" />
+          <span class="hint">Bankanızdan teyit edin.</span>
+        </label>
+        <label>Tahvil stopaj (%)
+          <input data-setting="bondStopaj" type="number" step="0.5" min="0" max="100" />
+          <span class="hint">DİBS faizinde %0 (31.12.2026'ya kadar).</span>
+        </label>
+        <label>Kambiyo vergisi (%)
+          <input data-setting="fxBuyTax" type="number" step="0.01" min="0" />
+          <span class="hint">Döviz alırken ödenir (BSMV).</span>
+        </label>
+      </div>
+
+      <h3>Kur ve faiz</h3>
+      <div class="settings-grid">
+        <label>Kur makası (%)
+          <input data-setting="spread" type="number" step="0.01" min="0" />
+          <span class="hint" data-hint="spread"></span>
+        </label>
+        <label>Bankanın TCMB ortalamasından farkı (puan)
+          <input data-setting="tlGap" type="number" step="0.25" min="0" />
+          <span class="hint">TL faizi = TCMB ortalaması − bu fark.</span>
+        </label>
+      </div>
+
+      <h3>Ek senaryolar</h3>
+      <div class="settings-grid">
+        <label>Aylık enflasyon (%)
+          <input data-setting="inflation" type="number" step="0.01" />
+          <span class="hint" data-hint="inflation"></span>
+        </label>
+        <label>Yıl sonu USD/TRY beklentisi
+          <input data-setting="expUsd" type="number" step="0.01" min="0" />
+          <span class="hint">Doluysa "Piyasa beklentisi" senaryosu eklenir.</span>
+        </label>
+        <label>Tahvil / bono faizi (%)
+          <input data-setting="bondRate" type="number" step="0.01" min="0" />
+          <span class="hint">Doluysa "Tahvil" seçeneği eklenir.</span>
+        </label>
+      </div>
+
+      <footer class="dialog-foot">
+        <button type="button" class="link-btn" id="reset-settings">Varsayılanlara dön</button>
+        <button type="submit" class="primary-btn">Tamam</button>
+      </footer>
+    </form>
+  </dialog>
+
   <script type="module" src="app.js"></script>
 </body>
 </html>

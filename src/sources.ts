@@ -8,11 +8,17 @@ export type DepositRate = { series: string; date: string; rate: number };
 
 const FRANKFURTER_URL = "https://api.frankfurter.dev/v1";
 
-// EVDS series for TL deposit rates (weighted average, flow data). Override with env if TCMB changes codes.
-export const DEPOSIT_SERIES = {
-  upTo1Month: process.env.EVDS_DEPOSIT_1M ?? "TP.TRY.MT02",
-  upTo3Months: process.env.EVDS_DEPOSIT_3M ?? "TP.TRY.MT03",
-};
+// EVDS weighted average rates on new savings deposits (tasarruf mevduatı, flow, weekly), by term bucket.
+// TP.<CUR>TAS.MT01 = up to 1 month, MT02 = up to 3 months, MT03 = up to 6 months, MT04 = up to 1 year, MT05 = longer.
+export const DEPOSIT_CURRENCIES = ["TRY", "USD", "EUR"] as const;
+export const DEPOSIT_TERMS = [
+  { id: "upTo1Month", maxDays: 31, suffix: "MT01" },
+  { id: "upTo3Months", maxDays: 91, suffix: "MT02" },
+  { id: "upTo6Months", maxDays: 182, suffix: "MT03" },
+  { id: "upTo1Year", maxDays: 365, suffix: "MT04" },
+  { id: "over1Year", maxDays: Infinity, suffix: "MT05" },
+] as const;
+const depositCode = (cur: string, suffix: string) => process.env[`EVDS_DEPOSIT_${cur}_${suffix}`] ?? `TP.${cur}TAS.${suffix}`;
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -72,11 +78,16 @@ export async function fetchDepositRates(key: string | undefined, now = new Date(
   if (!key) return null;
   const start = new Date(now);
   start.setUTCDate(start.getUTCDate() - 120);
-  const codes = [DEPOSIT_SERIES.upTo1Month, DEPOSIT_SERIES.upTo3Months];
+  const codes = DEPOSIT_CURRENCIES.flatMap((cur) => DEPOSIT_TERMS.map((t) => depositCode(cur, t.suffix)));
   const s = await evdsSeries(codes, start, now, key);
   const latest = (code: string): DepositRate | null => {
     const p = s[code].at(-1);
     return p ? { series: code, date: p.date, rate: p.value } : null;
   };
-  return { upTo1Month: latest(codes[0]), upTo3Months: latest(codes[1]) };
+  return Object.fromEntries(
+    DEPOSIT_CURRENCIES.map((cur) => [
+      cur,
+      Object.fromEntries(DEPOSIT_TERMS.map((t) => [t.id, { ...latest(depositCode(cur, t.suffix)), maxDays: t.maxDays }])),
+    ]),
+  );
 }
