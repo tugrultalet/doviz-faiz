@@ -97,15 +97,14 @@
     <form method="dialog" id="settings-form">
       <header class="dialog-head">
         <h2 id="settings-title">Ayarlar</h2>
-        <button type="submit" class="icon-btn" aria-label="Kapat">✕</button>
+        <fieldset class="theme">
+          <legend class="visually-hidden">Tema</legend>
+          <label><input type="radio" name="theme" value="system" /> Sistem</label>
+          <label><input type="radio" name="theme" value="light" /> Açık</label>
+          <label><input type="radio" name="theme" value="dark" /> Koyu</label>
+        </fieldset>
+        <button type="submit" class="icon-btn close-btn" aria-label="Kapat">✕</button>
       </header>
-
-      <fieldset class="theme">
-        <legend>Tema</legend>
-        <label><input type="radio" name="theme" value="system" /> Sistem</label>
-        <label><input type="radio" name="theme" value="light" /> Açık</label>
-        <label><input type="radio" name="theme" value="dark" /> Koyu</label>
-      </fieldset>
 
       <h3>Vergiler</h3>
       <div class="settings-grid">
@@ -115,15 +114,15 @@
         </label>
         <label>Döviz stopaj (%)
           <input data-setting="fxStopaj" type="number" step="0.5" min="0" max="100" />
-          <span class="hint">Bankanızdan teyit edin.</span>
+          <span class="hint static">Bankanızdan teyit edin.</span>
         </label>
         <label>Tahvil stopaj (%)
           <input data-setting="bondStopaj" type="number" step="0.5" min="0" max="100" />
-          <span class="hint">DİBS faizinde %0 (31.12.2026'ya kadar).</span>
+          <span class="hint static">DİBS faizinde %0 (31.12.2026'ya kadar).</span>
         </label>
         <label>Kambiyo vergisi (%)
           <input data-setting="fxBuyTax" type="number" step="0.01" min="0" />
-          <span class="hint">Döviz alırken ödenir (BSMV).</span>
+          <span class="hint static">Döviz alırken ödenir (BSMV).</span>
         </label>
       </div>
 
@@ -133,9 +132,9 @@
           <input data-setting="spread" type="number" step="0.01" min="0" />
           <span class="hint" data-hint="spread"></span>
         </label>
-        <label>Bankanın TCMB ortalamasından farkı (puan)
+        <label>Banka farkı (puan)
           <input data-setting="tlGap" type="number" step="0.25" min="0" />
-          <span class="hint">TL faizi = TCMB ortalaması − bu fark.</span>
+          <span class="hint static">TL faizi = TCMB ortalaması − bu fark.</span>
         </label>
       </div>
 
@@ -147,7 +146,7 @@
         </label>
         <label>Tahvil / bono faizi (%)
           <input data-setting="bondRate" type="number" step="0.01" min="0" />
-          <span class="hint">Doluysa "Tahvil" seçeneği eklenir.</span>
+          <span class="hint static">Doluysa "Tahvil" seçeneği eklenir.</span>
         </label>
       </div>
 

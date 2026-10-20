@@ -42,6 +42,11 @@ export function createApp(key = process.env.EVDS_API_KEY) {
 
   app.get("/api/indicators", async (c) => c.json({ available: Boolean(key), indicators: await indicators() }));
 
+  // Always revalidate page files so phones do not keep an old CSS/JS after a deploy.
+  app.use("/*", async (c, next) => {
+    await next();
+    if (!c.req.path.startsWith("/api/")) c.header("Cache-Control", "no-cache");
+  });
   app.use("/*", serveStatic({ root: "./public" }));
   return app;
 }
