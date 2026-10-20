@@ -8,6 +8,7 @@ import {
   equivalents,
   paritySeries,
   realRate,
+  valueOnOrBefore,
   formatAmountInput,
   parseAmount,
   rateDirection,
@@ -275,20 +276,29 @@ function renderIndicators() {
     ),
   );
 
+  // Both shown in billions of USD. Reserves come in million USD; FX deposits come in thousand TL
+  // and are converted at the USD/TRY rate of each date.
+  const toUsdBn = {
+    reserves: (p) => p.value / 1000,
+    fxDeposits: (p) => (fxData ? (p.value * 1000) / valueOnOrBefore(fxData.usd, p.date).value / 1e9 : null),
+  };
   for (const [id, title] of [
-    ["reserves", "TCMB rezervleri (milyon USD)"],
+    ["reserves", "TCMB rezervleri"],
     ["fxDeposits", "Yerleşiklerin döviz mevduatı"],
   ]) {
-    const pts = pointsOf(id);
-    const c = pts && changeOver(pts, 90);
+    const pts = pointsOf(id)
+      ?.map((p) => ({ date: p.date, value: toUsdBn[id](p) }))
+      .filter((p) => p.value != null);
+    const c = pts?.length && changeOver(pts, 90);
     tiles.push(
       tile(
         id,
         title,
-        c && `<div class="value">${nf(0).format(c.last.value)}</div><p>3 ayda ${fmtPct(c.pct, 1)} · ${fmtDate(c.last.date)}</p>`,
+        c && `<div class="value">${nf(1).format(c.last.value)} milyar $</div><p>3 ayda ${fmtPct(c.pct, 1)} · ${fmtDate(c.last.date)}</p>`,
       ),
     );
   }
+
 
   const bond = pointsOf("bondYield")?.at(-1);
   tiles.push(
