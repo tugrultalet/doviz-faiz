@@ -246,3 +246,26 @@ export function paritySeries(eur, usd) {
   const usdByDate = new Map(usd.map((p) => [p.date, p.value]));
   return eur.filter((p) => usdByDate.has(p.date)).map((p) => ({ date: p.date, value: p.value / usdByDate.get(p.date) }));
 }
+
+/** Months between two YYYY-MM-DD dates (by calendar month). */
+export function monthsBetween(fromIso, toIso) {
+  const [fy, fm] = fromIso.split("-").map(Number);
+  const [ty, tm] = toIso.split("-").map(Number);
+  return (ty - fy) * 12 + (tm - fm);
+}
+
+/**
+ * Return of a monthly series over the last `months`, read from `field` of each point.
+ * Returns { pct, cagr, from } or null when the history is shorter than asked.
+ * cagr (yearly compound return) is null for periods under one year.
+ */
+export function periodReturn(points, field, months) {
+  const valid = points.filter((p) => p[field] != null);
+  const last = valid.at(-1);
+  if (!last) return null;
+  const past = [...valid].reverse().find((p) => monthsBetween(p.date, last.date) >= months);
+  if (!past) return null;
+  const span = monthsBetween(past.date, last.date);
+  const pct = last[field] / past[field] - 1;
+  return { pct, cagr: span >= 12 ? Math.pow(1 + pct, 12 / span) - 1 : null, from: past.date };
+}

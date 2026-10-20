@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Altın</title>
+  <script>
+    try {
+      const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
+      if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+    } catch {}
+    document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+    document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  </script>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <main>
+    <header class="top">
+      <div>
+        <h1>Altın</h1>
+        <p class="muted small" id="source">Veriler yükleniyor…</p>
+      </div>
+      <div class="header-actions">
+        <a href="/" class="icon-btn" aria-label="Döviz sayfasına dön" title="Döviz"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14.8 8.6c-.5-.9-1.6-1.4-2.8-1.4-1.6 0-2.8.8-2.8 2.1 0 3 5.8 1.6 5.8 4.7 0 1.3-1.3 2.2-3 2.2-1.3 0-2.5-.6-3-1.5M12 5.5v1.7M12 16.8v1.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Döviz</span></a>
+      </div>
+    </header>
+
+    <p class="error" id="error" hidden></p>
+
+    <div class="cards" id="gold-cards"></div>
+
+    <section>
+      <h2>Getiri</h2>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="returns" id="gold-returns"></table>
+        </div>
+        <p class="muted small">Aylık ortalama fiyatlarla hesaplanır. "Yıllık", dönemin yıllık ortalama (bileşik) getirisidir.</p>
+      </div>
+    </section>
+
+    <section>
+      <h2>Fiyat geçmişi</h2>
+      <div class="tabs" role="tablist" aria-label="Dönem" id="gold-range"></div>
+      <div class="card charts">
+        <h3>Gram altın (TL) <span class="muted small">· logaritmik ölçek</span></h3>
+        <div class="chart"><canvas id="gold-tl-chart" aria-label="Gram altın TL fiyatı"></canvas></div>
+        <h3>Ons altın (USD)</h3>
+        <div class="chart"><canvas id="gold-usd-chart" aria-label="Ons altın dolar fiyatı"></canvas></div>
+      </div>
+    </section>
+
+    <footer class="muted small">
+      <p>Kaynak: TCMB EVDS (Ankara Kuyumcular ve Saatçiler Odası). Gram: külçe altın satış fiyatı. Ons: Londra satış fiyatı. Aylık ortalamalar. Yatırım tavsiyesi değildir.</p>
+    </footer>
+  </main>
+  <script type="module" src="altin.js"></script>
+</body>
+</html>

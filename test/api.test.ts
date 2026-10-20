@@ -109,3 +109,33 @@ describe("/api/indicators", () => {
     expect(indicators.reserves.error).toBe("empty");
   });
 });
+
+describe("/api/gold", () => {
+  it("needs an EVDS key", async () => {
+    const res = await createApp("").request("/api/gold");
+    expect(res.status).toBe(503);
+  });
+
+  it("merges monthly TL/gram and USD/ounce series by month", async () => {
+    const fetchMock = vi.fn(async () =>
+      json({
+        items: [
+          { Tarih: "1950-12", TP_MK_KUL_YTL: "0.0000045", TP_MK_LON_YTL: null },
+          { Tarih: "2026-4", TP_MK_KUL_YTL: "6100", TP_MK_LON_YTL: "3900" },
+          { Tarih: "2026-5", TP_MK_KUL_YTL: "6200", TP_MK_LON_YTL: "3950" },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const body = await (await createApp("k").request("/api/gold")).json();
+    const url = fetchMock.mock.calls[0][0] as unknown as string;
+    expect(url).toContain("series=TP.MK.KUL.YTL-TP.MK.LON.YTL");
+    expect(url).toContain("startDate=01-01-1950");
+    expect(url).toContain("&frequency=5&aggregationTypes=avg-avg");
+    expect(body.points).toEqual([
+      { date: "1950-12-01", tlGram: 0.0000045, usdOunce: null },
+      { date: "2026-04-01", tlGram: 6100, usdOunce: 3900 },
+      { date: "2026-05-01", tlGram: 6200, usdOunce: 3950 },
+    ]);
+  });
+});

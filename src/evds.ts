@@ -18,8 +18,13 @@ export function parseEvdsDate(raw: string): string | null {
   return null;
 }
 
-export async function evdsSeries(codes: string[], start: Date, end: Date, key: string) {
-  const url = `${EVDS_URL}/series=${codes.join("-")}&startDate=${evdsDay(start)}&endDate=${evdsDay(end)}&type=json`;
+/** frequency: 5 = monthly (see EVDS docs); aggregation: avg | last | first | min | max | sum. */
+export type SeriesOptions = { frequency?: number; aggregation?: string };
+
+export async function evdsSeries(codes: string[], start: Date, end: Date, key: string, opts: SeriesOptions = {}) {
+  let url = `${EVDS_URL}/series=${codes.join("-")}&startDate=${evdsDay(start)}&endDate=${evdsDay(end)}&type=json`;
+  if (opts.frequency) url += `&frequency=${opts.frequency}`;
+  if (opts.aggregation) url += `&aggregationTypes=${codes.map(() => opts.aggregation).join("-")}`;
   const res = await fetch(url, { headers: { key } });
   if (!res.ok) throw new Error(`EVDS ${res.status} for ${codes.join(",")}`);
   const body = (await res.json()) as { items?: Record<string, unknown>[] };

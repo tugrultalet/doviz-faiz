@@ -32,7 +32,10 @@
         <h1>Döviz mi, faiz mi?</h1>
         <p class="muted small" id="source">Veriler yükleniyor…</p>
       </div>
-      <button type="button" class="icon-btn" id="open-settings">⚙ Ayarlar</button>
+      <div class="header-actions">
+        <a href="altin.html" class="icon-btn" aria-label="Altın sayfası" title="Altın"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h8l-1.5-5h-5zM13 20h8l-1.5-5h-5zM8 13h8l-1.5-5h-5z" fill="#e0a800" stroke="#9a6b00" stroke-width="1.2" stroke-linejoin="round"/></svg><span>Altın</span></a>
+        <button type="button" class="icon-btn" id="open-settings">⚙ Ayarlar</button>
+      </div>
     </header>
 
     <p class="error" id="error" hidden></p>
@@ -40,7 +43,7 @@
     <section>
       <h2>Kur trendi</h2>
       <div class="cards" id="trend-cards"></div>
-      <details class="card charts" open>
+      <details class="card charts">
         <summary>Grafikleri göster</summary>
         <h3>Son 1 yılda değişim (%)</h3>
         <div class="chart"><canvas id="rate-chart" aria-label="Son 1 yılda USD/TRY, EUR/TRY ve EUR/USD değişimi"></canvas></div>

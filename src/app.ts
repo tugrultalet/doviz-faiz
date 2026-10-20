@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
 
@@ -21,6 +22,7 @@ export function createApp(key = process.env.EVDS_API_KEY) {
   const fx = cached(() => fetchFx(key));
   const deposit = cached(() => fetchDepositRates(key));
   const indicators = cached(() => fetchIndicators(key));
+  const gold = cached(() => fetchGold(key));
 
   app.get("/api/fx", async (c) => {
     try {
@@ -37,6 +39,17 @@ export function createApp(key = process.env.EVDS_API_KEY) {
     } catch (err) {
       console.error(err);
       return c.json({ available: false, rates: null, error: "Faiz verisi alınamadı. Oranı elle girin." });
+    }
+  });
+
+  app.get("/api/gold", async (c) => {
+    try {
+      const data = await gold();
+      if (!data?.points.length) return c.json({ error: "Altın verisi yok. EVDS anahtarı gerekli." }, 503);
+      return c.json(data);
+    } catch (err) {
+      console.error(err);
+      return c.json({ error: "Altın verisi alınamadı. Daha sonra tekrar deneyin." }, 502);
     }
   });
 

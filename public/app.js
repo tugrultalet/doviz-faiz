@@ -515,6 +515,13 @@ function buildScenarios(input, now) {
     { short: "1 yıllık trend", title: "Kur 1 yıllık trendle giderse", end: trend("dailyGrowthYear") },
     { short: "Son 30 gün trendi", title: "Kur son 30 günlük trendle giderse", end: trend("dailyGrowthMonth") },
   ];
+  // Average trend: the mean of the two forecast rates above.
+  const [year, month] = scenarios;
+  scenarios.push({
+    short: "Ortalama trend",
+    title: "Kur iki trendin ortalamasıyla giderse",
+    end: Object.fromEntries(["USD", "EUR"].map((c) => [c, (year.end[c] + month.end[c]) / 2])),
+  });
   for (const sc of scenarios) {
     sc.result = compareOptions({ ...input, now, end: sc.end });
     sc.ranking = Object.entries(sc.result)
@@ -566,7 +573,10 @@ function render() {
     })
     .join("");
 
-  const other = scenarios[1 - scenarioIndex];
+  const others = scenarios
+    .filter((_, i) => i !== scenarioIndex)
+    .map((o) => `${o.short}: <strong>${OPTION_LABELS[o.ranking[0]]}</strong>`)
+    .join(" · ");
 
   $("result").innerHTML = `
     <div class="card result-card">
@@ -579,7 +589,7 @@ function render() {
       </div>
       <ul class="options">${options}</ul>
       <p class="muted small">Ayrıntı için bir seçeneğe tıklayın. Makas, kambiyo vergisi ve stopaj düşülmüştür.</p>
-      <p class="small others">${other.short} senaryosunda en iyisi: <strong>${OPTION_LABELS[other.ranking[0]]}</strong></p>
+      <p class="small others">Diğer senaryolarda en iyisi: ${others}</p>
       ${breakEvenNote(input, now)}
       ${rateNote()}
     </div>`;

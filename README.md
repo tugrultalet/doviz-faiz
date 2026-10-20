@@ -8,6 +8,7 @@ TL mevduat, dolar ve euro seçeneklerini karşılaştırır.
 - Stopaj ve kur makası sonrası vade sonu tutarını üç senaryoda hesaplar: 1 yıllık trend, son 30 gün trendi, sabit kur.
 - Başabaş kuru gösterir.
 - Piyasa göstergeleri (EVDS): TÜFE, TCMB fonlama faizi, yıl sonu USD/TRY beklentisi, hanehalkı enflasyon beklentisi, reel efektif kur, brüt rezervler, yerleşiklerin döviz mevduatı, tahvil faizi.
+- Altın sayfası (`/altin.html`): 1950'den bugüne aylık gram altın (TL) ve ons altın (USD), getiri tablosu ve grafikler (EVDS `TP.MK.KUL.YTL`, `TP.MK.LON.YTL`).
 - Tahvil/bono seçeneği (stopaj %0), reel getiri (enflasyon sonrası) ve "piyasa beklentisi gerçekleşirse" senaryosu.
 
 ## Komutlar

@@ -1,6 +1,7 @@
 import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { discoverSeries } from "./evds.js";
+import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
 
@@ -19,10 +20,14 @@ if (key) {
       const last = r.points?.at(-1);
       console.log(`[evds-check] ${id} ${r.series || "-"}: ${r.error ?? `${r.points!.length} points, last ${last!.date} = ${last!.value}`}`);
     }
+    const gold = await fetchGold(key).catch((err: Error) => err.message);
+    console.log(
+      "[evds-check] gold",
+      typeof gold === "string" ? gold : `${JSON.stringify(gold?.series)}: ${gold?.points.length} months, first ${JSON.stringify(gold?.points[0])}, last ${JSON.stringify(gold?.points.at(-1))}`,
+    );
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Altın", ""],
-        ["Kıymetli Maden", "Altın"],
+        ["Altın Fiyatları", ""],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();

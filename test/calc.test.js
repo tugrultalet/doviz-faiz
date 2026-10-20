@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  monthsBetween,
+  periodReturn,
   paritySeries,
   realRate,
   formatAmountInput,
@@ -347,5 +349,33 @@ describe("realRate and paritySeries", () => {
     const eur = [{ date: "2026-10-19", value: 58 }, { date: "2026-10-20", value: 58.5 }];
     const usd = [{ date: "2026-10-20", value: 50 }];
     expect(paritySeries(eur, usd)).toEqual([{ date: "2026-10-20", value: 1.17 }]);
+  });
+});
+
+describe("periodReturn", () => {
+  // 25 monthly points, value doubles over 24 months
+  const pts = Array.from({ length: 25 }, (_, i) => ({
+    date: `${2024 + Math.floor(i / 12)}-${String((i % 12) + 1).padStart(2, "0")}-01`,
+    tl: Math.pow(2, i / 24),
+    usd: i < 3 ? null : 10 + i,
+  }));
+
+  it("counts calendar months", () => {
+    expect(monthsBetween("2024-01-01", "2026-01-01")).toBe(24);
+    expect(monthsBetween("2025-11-01", "2026-02-01")).toBe(3);
+  });
+
+  it("computes total and yearly compound return", () => {
+    const r = periodReturn(pts, "tl", 24);
+    expect(r.pct).toBeCloseTo(1, 10);
+    expect(r.cagr).toBeCloseTo(Math.SQRT2 - 1, 10);
+    expect(r.from).toBe("2024-01-01");
+    expect(periodReturn(pts, "tl", 1).cagr).toBeNull();
+  });
+
+  it("returns null when history is too short and skips missing values", () => {
+    expect(periodReturn(pts, "tl", 36)).toBeNull();
+    expect(periodReturn(pts, "usd", 21).from).toBe("2024-04-01");
+    expect(periodReturn(pts, "usd", 22)).toBeNull();
   });
 });
