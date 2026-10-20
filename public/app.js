@@ -1,12 +1,30 @@
-import { breakEvenRate, compareOptions, projectRate, tlStopajForDays, trendStats } from "./calc.js";
+import {
+  OPTIONS,
+  breakEvenRate,
+  changeOver,
+  compareOptions,
+  daysUntilYearEnd,
+  inflationStats,
+  percentileOf,
+  projectRate,
+  projectToTarget,
+  rateDirection,
+  tlStopajForDays,
+  trendStats,
+} from "./calc.js";
 
 const $ = (id) => document.getElementById(id);
 const CURRENCIES = { USD: { label: "Dolar", color: "--series-usd" }, EUR: { label: "Euro", color: "--series-eur" } };
-const OPTION_LABELS = { TRY: "TL mevduatta tut", USD: "Dolarda tut", EUR: "Euroda tut" };
+const OPTION_LABELS = { TRY: "TL mevduatta tut", BOND: "Tahvil / bonoda tut", USD: "Dolarda tut", EUR: "Euroda tut" };
 const VERDICT = {
   faster: "↑ Hızlandı",
   slower: "↓ Yavaşladı",
   same: "→ Aynı hızda",
+};
+const MISSING = {
+  "no-key": "EVDS anahtarı yok",
+  "not-configured": "Seri kodu henüz tanımlı değil",
+  empty: "EVDS boş veri döndü",
 };
 
 const nf = (digits) => new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -19,22 +37,30 @@ const SYMBOL = { TRY: "TL", USD: "USD", EUR: "EUR" };
 
 let stats = null;
 let depositRates = null;
-let tlRateTouched = false;
-let tlStopajTouched = false;
+let indicators = {};
+// Inputs the user edited by hand; live data never overwrites them.
+const touched = new Set();
 
 async function load() {
   try {
-    const [fxRes, depRes] = await Promise.all([fetch("/api/fx"), fetch("/api/deposit-rate")]);
+    const [fxRes, depRes, indRes] = await Promise.all([
+      fetch("/api/fx"),
+      fetch("/api/deposit-rate"),
+      fetch("/api/indicators").catch(() => null),
+    ]);
     const fx = await fxRes.json();
     if (!fxRes.ok) throw new Error(fx.error ?? "Kur verisi alınamadı.");
     const dep = await depRes.json();
+    const ind = indRes?.ok ? await indRes.json() : { available: false, indicators: {} };
 
     stats = { USD: trendStats(fx.usd), EUR: trendStats(fx.eur) };
     depositRates = dep.rates;
+    indicators = ind.indicators ?? {};
     $("source").textContent = `Kur kaynağı: ${fx.source}. Son veri: ${fmtDate(stats.USD.current.date)}.`;
 
     renderCards();
     renderCharts(fx);
+    renderIndicators(ind.available);
     applyDefaults();
     if (dep.error) showError(dep.error);
     renderResults();
@@ -46,6 +72,109 @@ async function load() {
 function showError(msg) {
   $("error").textContent = msg;
   $("error").hidden = false;
+}
+
+/** Points of an indicator, or null when EVDS did not deliver it. */
+const pointsOf = (id) => (indicators[id]?.points?.length ? indicators[id].points : null);
+
+function tile(id, title, body) {
+  const r = indicators[id];
+  if (!body) {
+    const reason = r ? (MISSING[r.error] ?? "Veri alınamadı") : "Veri yok";
+    return `<article class="tile missing"><h3>${title}</h3><div class="value">${reason}</div></article>`;
+  }
+  return `<article class="tile"><h3>${title}</h3>${body}</article>`;
+}
+
+function renderIndicators(available) {
+  $("indicator-note").textContent = available
+    ? "Kaynak: TCMB EVDS. Bu göstergeler kurun ve faizin yönü hakkında bilgi verir. Kesin tahmin değildir."
+    : "EVDS anahtarı girilmedi. Göstergeler anahtar girildikten sonra görünür.";
+  const usdNow = stats.USD.current.value;
+  const tiles = [];
+
+  const cpi = pointsOf("cpi");
+  const inf = cpi && inflationStats(cpi);
+  tiles.push(
+    tile(
+      "cpi",
+      "Enflasyon (TÜFE)",
+      inf &&
+        `<div class="value">${fmtPct(inf.monthly)} <span class="small muted">aylık</span></div>
+         <p>Yıllık: ${inf.annual == null ? "–" : fmtPct(inf.annual, 1)} · ${fmtDate(inf.date).slice(3)}</p>`,
+    ),
+  );
+
+  const fc = pointsOf("fundingCost");
+  const dir = fc && rateDirection(fc, 90);
+  const dirText = { down: "↓ Faiz düşüş döneminde", up: "↑ Faiz yükseliş döneminde", flat: "→ Faiz yatay" };
+  tiles.push(
+    tile(
+      "fundingCost",
+      "TCMB fonlama faizi",
+      dir &&
+        `<div class="value">%${nf(2).format(dir.last.value)}</div>
+         <p>${dirText[dir.direction]} (3 ayda ${dir.diff >= 0 ? "+" : ""}${nf(2).format(dir.diff)} puan)</p>`,
+    ),
+  );
+
+  const exp = pointsOf("expUsdYearEnd");
+  const expLast = exp?.at(-1);
+  tiles.push(
+    tile(
+      "expUsdYearEnd",
+      "Yıl sonu USD/TRY beklentisi",
+      expLast &&
+        `<div class="value">${fmtRate(expLast.value)}</div>
+         <p>Bugüne göre ${fmtPct(expLast.value / usdNow - 1)} · Piyasa Katılımcıları Anketi</p>`,
+    ),
+  );
+
+  const hh = pointsOf("hhInflationExp")?.at(-1);
+  tiles.push(
+    tile(
+      "hhInflationExp",
+      "Hanehalkı enflasyon beklentisi",
+      hh && `<div class="value">%${nf(1).format(hh.value)}</div><p>12 ay sonrası · ${fmtDate(hh.date).slice(3)}</p>`,
+    ),
+  );
+
+  const reer = pointsOf("reer");
+  const reerLast = reer?.at(-1);
+  const reerPct = reer && percentileOf(reer, reerLast.value);
+  tiles.push(
+    tile(
+      "reer",
+      "Reel efektif kur (TÜFE bazlı)",
+      reerLast &&
+        `<div class="value">${nf(1).format(reerLast.value)}</div>
+         <p>Son 10 yılın %${nf(0).format(reerPct * 100)} dilimi. ${
+           reerPct >= 0.8 ? "TL reel olarak pahalı: kur artış riski yüksek." : reerPct <= 0.2 ? "TL reel olarak ucuz." : "Tarihsel ortalamaya yakın."
+         }</p>`,
+    ),
+  );
+
+  for (const [id, title] of [
+    ["reserves", "TCMB brüt rezervleri"],
+    ["fxDeposits", "Yerleşiklerin döviz mevduatı"],
+  ]) {
+    const pts = pointsOf(id);
+    const c = pts && changeOver(pts, 90);
+    tiles.push(
+      tile(
+        id,
+        title,
+        c && `<div class="value">${nf(0).format(c.last.value)}</div><p>3 ayda ${fmtPct(c.pct, 1)} · ${fmtDate(c.last.date)}</p>`,
+      ),
+    );
+  }
+
+  const bond = pointsOf("bondYield")?.at(-1);
+  tiles.push(
+    tile("bondYield", "Tahvil / bono faizi", bond && `<div class="value">%${nf(2).format(bond.value)}</div><p>${fmtDate(bond.date)}</p>`),
+  );
+
+  $("indicator-tiles").innerHTML = tiles.join("");
 }
 
 function renderCards() {
@@ -142,21 +271,37 @@ function pickDepositRate(days) {
   return days <= 31 ? depositRates.upTo1Month ?? depositRates.upTo3Months : depositRates.upTo3Months ?? depositRates.upTo1Month;
 }
 
+function setDefault(id, value, hint) {
+  if (value != null && !touched.has(id)) $(id).value = value;
+  if (hint) $(`${id}Hint`).textContent = hint;
+}
+
 function applyDefaults() {
   const days = Number($("days").value) || 32;
-  if (!tlStopajTouched) $("tlStopaj").value = tlStopajForDays(days);
+  if (!touched.has("tlStopaj")) $("tlStopaj").value = tlStopajForDays(days);
+
   const dep = pickDepositRate(days);
   if (dep) {
-    if (!tlRateTouched) $("tlRate").value = dep.rate.toFixed(2);
-    $("tlRateHint").textContent = `TCMB ortalaması (${dep.series}, ${fmtDate(dep.date)}): %${nf(2).format(dep.rate)}. Bankanızın oranını yazabilirsiniz.`;
+    setDefault("tlRate", dep.rate.toFixed(2), `TCMB ortalaması (${dep.series}, ${fmtDate(dep.date)}): %${nf(2).format(dep.rate)}. Bankanızın oranını yazabilirsiniz.`);
   } else {
     if (!$("tlRate").value) $("tlRate").value = "40";
     $("tlRateHint").textContent = "Canlı faiz verisi yok. Bankanızın oranını yazın.";
   }
+
+  const cpi = pointsOf("cpi");
+  const inf = cpi && inflationStats(cpi);
+  if (inf) setDefault("inflation", (inf.monthly * 100).toFixed(2), `Son TÜFE (${fmtDate(inf.date).slice(3)}): %${nf(2).format(inf.monthly * 100)}. Değiştirebilirsiniz.`);
+
+  const exp = pointsOf("expUsdYearEnd")?.at(-1);
+  if (exp) setDefault("expUsd", exp.value.toFixed(2), `Piyasa Katılımcıları Anketi (${fmtDate(exp.date).slice(3)}). Değiştirebilirsiniz.`);
+
+  const bond = pointsOf("bondYield")?.at(-1);
+  if (bond) setDefault("bondRate", bond.value.toFixed(2), `EVDS (${fmtDate(bond.date)}). Bankanızın bono oranını yazabilirsiniz.`);
 }
 
 function readInput() {
   const num = (id) => Number($(id).value) || 0;
+  const optional = (id) => ($(id).value === "" ? null : Number($(id).value));
   return {
     amount: num("amount"),
     currency: $("currency").value,
@@ -166,6 +311,10 @@ function readInput() {
     fxRate: num("fxRate"),
     fxStopaj: num("fxStopaj"),
     spread: num("spread"),
+    monthlyInflation: optional("inflation"),
+    expUsd: optional("expUsd"),
+    bondRate: optional("bondRate"),
+    bondStopaj: num("bondStopaj"),
   };
 }
 
@@ -177,28 +326,32 @@ function renderResults() {
     return;
   }
   const now = { USD: stats.USD.current.value, EUR: stats.EUR.current.value };
+  const trend = (growth) => Object.fromEntries(["USD", "EUR"].map((c) => [c, projectRate(now[c], stats[c][growth], input.days)]));
   const scenarios = [
-    { key: "year", title: "1 yıllık trend sürerse", growth: "dailyGrowthYear" },
-    { key: "month", title: "Son 30 günlük trend sürerse", growth: "dailyGrowthMonth" },
-    { key: "flat", title: "Kur sabit kalırsa", growth: null },
-  ].map((sc) => {
-    const end = Object.fromEntries(
-      ["USD", "EUR"].map((c) => [c, sc.growth ? projectRate(now[c], stats[c][sc.growth], input.days) : now[c]]),
-    );
-    return { ...sc, end, result: compareOptions({ ...input, now, end }) };
-  });
+    { title: "1 yıllık trend sürerse", end: trend("dailyGrowthYear") },
+    { title: "Son 30 günlük trend sürerse", end: trend("dailyGrowthMonth") },
+  ];
+  if (input.expUsd > 0) {
+    // Survey gives only USD/TRY; EUR follows it at today's EUR/USD parity.
+    const usd = projectToTarget(now.USD, input.expUsd, daysUntilYearEnd(stats.USD.current.date), input.days);
+    scenarios.push({ title: "Piyasa beklentisi gerçekleşirse", end: { USD: usd, EUR: (usd * now.EUR) / now.USD } });
+  }
+  scenarios.push({ title: "Kur sabit kalırsa", end: { ...now } });
+  for (const sc of scenarios) sc.result = compareOptions({ ...input, now, end: sc.end });
 
   const cur = SYMBOL[input.currency];
   const head = scenarios.map((s) => `<th>${s.title}</th>`).join("");
-  const rows = ["TRY", "USD", "EUR"]
+  const options = OPTIONS.filter((o) => scenarios[0].result[o]);
+  const rows = options
     .map((opt) => {
       const cells = scenarios
         .map((s) => {
           const r = s.result[opt];
           const best = bestOption(s.result) === opt;
           const tl = input.currency === "TRY" ? "" : `<span class="sub">≈ ${fmtMoney(r.tlValue)} TL</span>`;
+          const real = r.realPct == null ? "" : `<span class="real">Reel: ${fmtPct(r.realPct)}</span>`;
           return `<td class="${best ? "best" : ""}">${best ? "★ " : ""}${fmtMoney(r.final)} ${cur}
-            <span class="sub">${fmtPct(r.gainPct)} · ${r.gain >= 0 ? "+" : ""}${fmtMoney(r.gain)} ${cur}</span>${tl}</td>`;
+            <span class="sub">${fmtPct(r.gainPct)} · ${r.gain >= 0 ? "+" : ""}${fmtMoney(r.gain)} ${cur}</span>${tl}${real}</td>`;
         })
         .join("");
       return `<tr><th scope="row">${OPTION_LABELS[opt]}</th>${cells}</tr>`;
@@ -219,21 +372,35 @@ function renderResults() {
     })
     .join("");
 
-  const yearBest = bestOption(scenarios[0].result);
-  const monthBest = bestOption(scenarios[1].result);
-  const summary =
-    yearBest === monthBest
-      ? `İki trend senaryosunda da en iyi seçenek: <strong>${OPTION_LABELS[yearBest]}</strong>.`
-      : `Senaryolar farklı sonuç veriyor: 1 yıllık trende göre <strong>${OPTION_LABELS[yearBest]}</strong>, son 30 günlük trende göre <strong>${OPTION_LABELS[monthBest]}</strong>.`;
+  const trendBest = [bestOption(scenarios[0].result), bestOption(scenarios[1].result)];
+  let summary =
+    trendBest[0] === trendBest[1]
+      ? `İki trend senaryosunda da en iyi seçenek: <strong>${OPTION_LABELS[trendBest[0]]}</strong>.`
+      : `Senaryolar farklı sonuç veriyor: 1 yıllık trende göre <strong>${OPTION_LABELS[trendBest[0]]}</strong>, son 30 günlük trende göre <strong>${OPTION_LABELS[trendBest[1]]}</strong>.`;
+  if (input.expUsd > 0) summary += ` Piyasa beklentisine göre: <strong>${OPTION_LABELS[bestOption(scenarios[2].result)]}</strong>.`;
+
+  const fc = pointsOf("fundingCost");
+  const dir = fc && rateDirection(fc, 90);
+  const rateNote =
+    dir?.direction === "down"
+      ? `<p class="note">Faizler düşüş döneminde. Daha uzun vadeli mevduat bugünkü oranı kilitler.</p>`
+      : dir?.direction === "up"
+        ? `<p class="note">Faizler yükseliş döneminde. Kısa vade, yükselen faizden faydalanmanızı sağlar.</p>`
+        : "";
+  const realNote =
+    input.monthlyInflation == null
+      ? ""
+      : `<p class="muted small">Reel getiri: TL bazında, aylık %${nf(2).format(input.monthlyInflation)} enflasyon sonrası. Negatif değer alım gücü kaybıdır.</p>`;
 
   $("results").innerHTML = `
-    <div class="result summary">${summary}</div>
+    <div class="result summary">${summary}${rateNote}</div>
     <div class="result">
       <h3>${input.days} gün sonra elinizdeki tutar (${cur}, masraf ve stopaj sonrası)</h3>
       <div class="table-wrap"><table>
         <thead><tr><th></th>${head}</tr></thead>
         <tbody>${rows}</tbody>
       </table></div>
+      ${realNote}
     </div>
     <div class="result">
       <h3>Senaryoların kur tahmini</h3>
@@ -254,8 +421,7 @@ function bestOption(result) {
 }
 
 $("form").addEventListener("input", (e) => {
-  if (e.target.id === "tlRate") tlRateTouched = true;
-  if (e.target.id === "tlStopaj") tlStopajTouched = true;
+  touched.add(e.target.id);
   if (e.target.id === "days") applyDefaults();
   renderResults();
 });

@@ -78,22 +78,39 @@ export function convert(amount, from, to, rates, spreadPct) {
   return to === "TRY" ? tl : tl / (rates[to] * (1 + half));
 }
 
+export const OPTIONS = ["TRY", "BOND", "USD", "EUR"];
+
 /**
- * Value at the end of the term, in the input currency, for keeping the money as TRY, USD or EUR.
- * input: { amount, currency, days, tlRate, tlStopaj, fxRate, fxStopaj, spread, now: {USD,EUR}, end: {USD,EUR} }
+ * Value at the end of the term, in the input currency, for each way of keeping the money.
+ * input: { amount, currency, days, tlRate, tlStopaj, fxRate, fxStopaj, spread, now: {USD,EUR}, end: {USD,EUR},
+ *          bondRate?, bondStopaj?, monthlyInflation? }
+ * BOND (government bond / T-bill) is a TL holding with its own rate and stopaj; it is skipped when bondRate is not set.
+ * realPct is the TL-based return after inflation; null when monthlyInflation is not set.
  */
 export function compareOptions(input) {
   const { amount, currency, days, spread, now, end } = input;
+  const startTl = currency === "TRY" ? amount : amount * now[currency];
+  const inflation = input.monthlyInflation == null ? null : Math.pow(1 + input.monthlyInflation / 100, days / 30);
   const result = {};
-  for (const option of ["TRY", "USD", "EUR"]) {
-    const start = convert(amount, currency, option, now, spread);
-    const grown =
+  for (const option of OPTIONS) {
+    if (option === "BOND" && !(input.bondRate > 0)) continue;
+    const held = option === "BOND" ? "TRY" : option;
+    const start = convert(amount, currency, held, now, spread);
+    const factor =
       option === "TRY"
-        ? start * netInterestFactor(input.tlRate, input.tlStopaj, days)
-        : start * netInterestFactor(input.fxRate, input.fxStopaj, days);
-    const final = convert(grown, option, currency, end, spread);
+        ? netInterestFactor(input.tlRate, input.tlStopaj, days)
+        : option === "BOND"
+          ? netInterestFactor(input.bondRate, input.bondStopaj ?? 0, days)
+          : netInterestFactor(input.fxRate, input.fxStopaj, days);
+    const final = convert(start * factor, held, currency, end, spread);
     const tlValue = currency === "TRY" ? final : final * end[currency];
-    result[option] = { final, tlValue, gain: final - amount, gainPct: final / amount - 1 };
+    result[option] = {
+      final,
+      tlValue,
+      gain: final - amount,
+      gainPct: final / amount - 1,
+      realPct: inflation == null ? null : tlValue / startTl / inflation - 1,
+    };
   }
   return result;
 }
@@ -111,4 +128,45 @@ export function breakEvenRate(rateNow, input) {
 
 export function projectRate(rateNow, dailyGrowth, days) {
   return rateNow * Math.pow(dailyGrowth, days);
+}
+
+/** Rate path that reaches `target` after `daysToTarget` days, evaluated after `days` days. */
+export function projectToTarget(rateNow, target, daysToTarget, days) {
+  return rateNow * Math.pow(target / rateNow, days / Math.max(1, daysToTarget));
+}
+
+export function daysUntilYearEnd(iso) {
+  const year = Number(iso.slice(0, 4));
+  return Math.round((Date.UTC(year, 11, 31) - Date.parse(iso)) / DAY_MS);
+}
+
+/** Monthly and annual inflation from a monthly price index. */
+export function inflationStats(index) {
+  if (index.length < 2) return null;
+  const last = index.at(-1);
+  const prev = index.at(-2);
+  const yearAgo = index.length >= 13 ? index.at(-13) : null;
+  return {
+    date: last.date,
+    monthly: last.value / prev.value - 1,
+    annual: yearAgo ? last.value / yearAgo.value - 1 : null,
+  };
+}
+
+/** Change of a level series (rate in %, or an index) over the last `days`. */
+export function changeOver(series, days) {
+  const last = series.at(-1);
+  const past = valueOnOrBefore(series, shift(last.date, days));
+  return { last, past, diff: last.value - past.value, pct: last.value / past.value - 1 };
+}
+
+/** Direction of an interest rate over `days`: moves under `threshold` points count as flat. */
+export function rateDirection(series, days = 90, threshold = 0.5) {
+  const c = changeOver(series, days);
+  return { ...c, direction: c.diff <= -threshold ? "down" : c.diff >= threshold ? "up" : "flat" };
+}
+
+/** Share of the history at or below `value` (0..1). */
+export function percentileOf(series, value) {
+  return series.filter((p) => p.value <= value).length / series.length;
 }

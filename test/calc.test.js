@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   breakEvenRate,
+  changeOver,
+  daysUntilYearEnd,
+  inflationStats,
+  percentileOf,
+  projectToTarget,
+  rateDirection,
   compareOptions,
   convert,
   netInterestFactor,
@@ -126,5 +132,78 @@ describe("compareOptions", () => {
 describe("projectRate", () => {
   it("compounds daily growth", () => {
     expect(projectRate(40, 1.001, 30)).toBeCloseTo(40 * Math.pow(1.001, 30), 10);
+  });
+});
+
+describe("compareOptions extras", () => {
+  const base = {
+    amount: 1_000_000,
+    currency: "TRY",
+    days: 30,
+    tlRate: 40,
+    tlStopaj: 17.5,
+    fxRate: 0,
+    fxStopaj: 25,
+    spread: 0,
+    now: { USD: 40, EUR: 50 },
+    end: { USD: 40, EUR: 50 },
+  };
+
+  it("adds the bond option only when a bond rate is set", () => {
+    expect(compareOptions(base).BOND).toBeUndefined();
+    const r = compareOptions({ ...base, bondRate: 38, bondStopaj: 0 });
+    expect(r.BOND.final).toBeCloseTo(1_000_000 * netInterestFactor(38, 0, 30), 4);
+    // 38% with no stopaj beats 40% with 17.5% stopaj
+    expect(r.BOND.final).toBeGreaterThan(r.TRY.final);
+  });
+
+  it("computes the real return after inflation", () => {
+    const r = compareOptions({ ...base, monthlyInflation: 2 });
+    expect(r.TRY.realPct).toBeCloseTo(netInterestFactor(40, 17.5, 30) / 1.02 - 1, 8);
+    expect(r.USD.realPct).toBeCloseTo(1 / 1.02 - 1, 8);
+    expect(compareOptions(base).TRY.realPct).toBeNull();
+  });
+
+  it("measures the real return in TL for a USD amount", () => {
+    const r = compareOptions({ ...base, amount: 1000, currency: "USD", end: { USD: 42, EUR: 50 }, monthlyInflation: 2 });
+    expect(r.USD.realPct).toBeCloseTo((1000 * 42) / (1000 * 40) / 1.02 - 1, 8);
+  });
+});
+
+describe("indicator helpers", () => {
+  const monthly = (values) => values.map((value, i) => ({ date: `2025-${String(i + 1).padStart(2, "0")}-01`, value }));
+
+  it("projects toward a target rate", () => {
+    expect(projectToTarget(40, 44, 70, 70)).toBeCloseTo(44, 10);
+    expect(projectToTarget(40, 44, 70, 0)).toBeCloseTo(40, 10);
+    expect(projectToTarget(40, 44, 70, 35)).toBeCloseTo(40 * Math.sqrt(1.1), 10);
+  });
+
+  it("counts days to year end", () => {
+    expect(daysUntilYearEnd("2026-10-20")).toBe(72);
+    expect(daysUntilYearEnd("2026-12-31")).toBe(0);
+  });
+
+  it("computes monthly and annual inflation from an index", () => {
+    const idx = [100, 102, 104, 106, 108, 110, 112, 114, 116, 118, 120, 122, 125.0];
+    const pts = idx.map((value, i) => ({ date: `20${i < 12 ? "25" : "26"}-${String((i % 12) + 1).padStart(2, "0")}-01`, value }));
+    const s = inflationStats(pts);
+    expect(s.monthly).toBeCloseTo(125 / 122 - 1, 10);
+    expect(s.annual).toBeCloseTo(0.25, 10);
+    expect(inflationStats(pts.slice(0, 5)).annual).toBeNull();
+  });
+
+  it("finds the rate direction over 90 days", () => {
+    const pts = [
+      { date: "2026-07-01", value: 45 },
+      { date: "2026-10-20", value: 41 },
+    ];
+    expect(rateDirection(pts, 90).direction).toBe("down");
+    expect(rateDirection([pts[0], { date: "2026-10-20", value: 45.2 }], 90).direction).toBe("flat");
+    expect(changeOver(pts, 90).diff).toBe(-4);
+  });
+
+  it("ranks a value in its history", () => {
+    expect(percentileOf(monthly([1, 2, 3, 4]), 3)).toBe(0.75);
   });
 });

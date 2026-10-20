@@ -1,10 +1,11 @@
 // Live data sources: TCMB EVDS (needs EVDS_API_KEY) with Frankfurter (ECB) as the FX fallback.
 
-export type Point = { date: string; value: number }; // date as YYYY-MM-DD
+import { evdsSeries, type Point } from "./evds.js";
+
+export type { Point };
 export type FxData = { source: string; usd: Point[]; eur: Point[] };
 export type DepositRate = { series: string; date: string; rate: number };
 
-const EVDS_URL = process.env.EVDS_BASE_URL ?? "https://evds3.tcmb.gov.tr/igmevdsms-dis";
 const FRANKFURTER_URL = "https://api.frankfurter.dev/v1";
 
 // EVDS series for TL deposit rates (weighted average, flow data). Override with env if TCMB changes codes.
@@ -14,30 +15,11 @@ export const DEPOSIT_SERIES = {
 };
 
 const isoDay = (d: Date) => d.toISOString().slice(0, 10);
-const evdsDay = (d: Date) => isoDay(d).split("-").reverse().join("-"); // DD-MM-YYYY
 
 function oneYearRange(now: Date) {
   const start = new Date(now);
   start.setUTCDate(start.getUTCDate() - 400); // a bit more than a year so the 365-day lookback always has data
   return { start, end: now };
-}
-
-async function evdsSeries(codes: string[], start: Date, end: Date, key: string) {
-  const url = `${EVDS_URL}/series=${codes.join("-")}&startDate=${evdsDay(start)}&endDate=${evdsDay(end)}&type=json`;
-  const res = await fetch(url, { headers: { key } });
-  if (!res.ok) throw new Error(`EVDS ${res.status}`);
-  const body = (await res.json()) as { items?: Record<string, unknown>[] };
-  const out: Record<string, Point[]> = Object.fromEntries(codes.map((c) => [c, []]));
-  for (const item of body.items ?? []) {
-    const [dd, mm, yyyy] = String(item.Tarih).split("-");
-    if (!yyyy) continue;
-    for (const code of codes) {
-      const raw = item[code.replaceAll(".", "_")];
-      const value = raw == null || raw === "" ? NaN : Number(raw);
-      if (Number.isFinite(value)) out[code].push({ date: `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`, value });
-    }
-  }
-  return out;
 }
 
 async function frankfurter(base: "USD" | "EUR", start: Date): Promise<Point[]> {

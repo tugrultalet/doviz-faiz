@@ -7,6 +7,8 @@ TL mevduat, dolar ve euro seçeneklerini karşılaştırır.
 - TL mevduat ortalama faizini EVDS'den çeker (elle de girilebilir).
 - Stopaj ve kur makası sonrası vade sonu tutarını üç senaryoda hesaplar: 1 yıllık trend, son 30 gün trendi, sabit kur.
 - Başabaş kuru gösterir.
+- Piyasa göstergeleri (EVDS): TÜFE, TCMB fonlama faizi, yıl sonu USD/TRY beklentisi, hanehalkı enflasyon beklentisi, reel efektif kur, brüt rezervler, yerleşiklerin döviz mevduatı, tahvil faizi.
+- Tahvil/bono seçeneği (stopaj %0), reel getiri (enflasyon sonrası) ve "piyasa beklentisi gerçekleşirse" senaryosu.
 
 ## Komutlar
 
@@ -24,6 +26,10 @@ npm run typecheck
 | `EVDS_API_KEY` | EVDS API anahtarı (evds3.tcmb.gov.tr → Benim Sayfam → Profilim → API KEY KOPYALA) |
 | `EVDS_DEPOSIT_1M` | 1 aya kadar vadeli TL mevduat faizi seri kodu (varsayılan `TP.TRY.MT02`) |
 | `EVDS_DEPOSIT_3M` | 3 aya kadar vadeli TL mevduat faizi seri kodu (varsayılan `TP.TRY.MT03`) |
+| `EVDS_CPI`, `EVDS_FUNDINGCOST`, `EVDS_EXPUSDYEAREND`, `EVDS_HHINFLATIONEXP`, `EVDS_REER`, `EVDS_RESERVES`, `EVDS_FXDEPOSITS`, `EVDS_BONDYIELD` | Gösterge seri kodları (varsayılanlar `src/indicators.ts` içinde). Boş kod: değer sayfada elle girilir. |
+| `EVDS_DISCOVER` | `1` ise sunucu açılışta EVDS veri gruplarını arar ve seri kodlarını loga yazar. |
+
+Sunucu açılışta her EVDS serisi için bir `[evds-check]` satırı yazar. Yanlış seri kodu bu satırlarda görünür.
 
 ## Yayın
 

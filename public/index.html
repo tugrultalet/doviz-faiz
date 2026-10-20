@@ -31,6 +31,12 @@
     </section>
 
     <section>
+      <h2>Piyasa göstergeleri</h2>
+      <p class="muted small" id="indicator-note"></p>
+      <div class="tiles" id="indicator-tiles"></div>
+    </section>
+
+    <section>
       <h2>Hesaplama</h2>
       <form id="form" class="form">
         <label>Tutar
@@ -61,6 +67,22 @@
         <label>Döviz stopaj (%)
           <input id="fxStopaj" type="number" step="0.5" min="0" max="100" value="25" />
           <span class="hint">Bankanızdan teyit edin.</span>
+        </label>
+        <label>Aylık enflasyon (%)
+          <input id="inflation" type="number" step="0.01" />
+          <span class="hint" id="inflationHint">Reel getiri için. Boş bırakılırsa hesaplanmaz.</span>
+        </label>
+        <label>Yıl sonu USD/TRY beklentisi
+          <input id="expUsd" type="number" step="0.01" min="0" />
+          <span class="hint" id="expUsdHint">Piyasa beklentisi senaryosu için. Boş bırakılırsa gösterilmez.</span>
+        </label>
+        <label>Devlet tahvili / bono faizi (yıllık %)
+          <input id="bondRate" type="number" step="0.01" min="0" />
+          <span class="hint" id="bondRateHint">Boş bırakılırsa tahvil seçeneği gösterilmez.</span>
+        </label>
+        <label>Tahvil stopaj (%)
+          <input id="bondStopaj" type="number" step="0.5" min="0" max="100" value="0" />
+          <span class="hint">DİBS faizinde stopaj %0 (31.12.2026'ya kadar).</span>
         </label>
         <label>Kur makası (alış–satış farkı %)
           <input id="spread" type="number" step="0.1" min="0" value="1" />

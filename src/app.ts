@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
 
 const TTL_MS = 60 * 60 * 1000;
@@ -19,6 +20,7 @@ export function createApp(key = process.env.EVDS_API_KEY) {
   const app = new Hono();
   const fx = cached(() => fetchFx(key));
   const deposit = cached(() => fetchDepositRates(key));
+  const indicators = cached(() => fetchIndicators(key));
 
   app.get("/api/fx", async (c) => {
     try {
@@ -37,6 +39,8 @@ export function createApp(key = process.env.EVDS_API_KEY) {
       return c.json({ available: false, rates: null, error: "Faiz verisi alınamadı. Oranı elle girin." });
     }
   });
+
+  app.get("/api/indicators", async (c) => c.json({ available: Boolean(key), indicators: await indicators() }));
 
   app.use("/*", serveStatic({ root: "./public" }));
   return app;
