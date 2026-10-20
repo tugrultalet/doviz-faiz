@@ -4,7 +4,6 @@ import {
   changeOver,
   compareOptions,
   inflationStats,
-  percentileOf,
   projectRate,
   equivalents,
   paritySeries,
@@ -262,17 +261,18 @@ function renderIndicators() {
     ),
   );
 
-  const reer = pointsOf("reer");
-  const reerLast = reer?.at(-1);
-  const reerPct = reer && percentileOf(reer, reerLast.value);
+  // 2003 = 100: above 100 the TL is worth more in real terms than in 2003, below 100 less.
+  const reerLast = pointsOf("reer")?.at(-1);
   tiles.push(
     tile(
       "reer",
       "Reel efektif kur (TÜFE bazlı)",
       reerLast &&
         `<div class="value">${nf(1).format(reerLast.value)}</div>
-         <p>Son 10 yılın %${nf(0).format(reerPct * 100)} dilimi. ${
-           reerPct >= 0.8 ? "TL reel olarak pahalı: kur artış riski yüksek." : reerPct <= 0.2 ? "TL reel olarak ucuz." : "Tarihsel ortalamaya yakın."
+         <p>${
+           reerLast.value >= 100
+             ? `100'ün üzerinde: TL reel olarak fazla değerli (2003'e göre %${nf(1).format(reerLast.value - 100)} pahalı).`
+             : `100'ün altında: TL reel olarak değersiz (2003'e göre %${nf(1).format(100 - reerLast.value)} ucuz).`
          }</p>`,
     ),
   );
