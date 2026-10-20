@@ -169,10 +169,14 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus { outline: 2p
 
 /* Indicators */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
-.tile h3 { font-size: 0.8rem; }
-.tile .value { font-size: 1.25rem; font-weight: 650; font-variant-numeric: tabular-nums; }
-.tile p { margin: 2px 0 0; font-size: 0.8rem; color: var(--text-secondary); }
+/* Title on top (fixed two-line height), value in the middle, note at the bottom: values line up across tiles. */
+.tile {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+  display: grid; grid-template-rows: 2.5em auto 1fr; row-gap: 8px; min-height: 150px;
+}
+.tile h3 { font-size: 0.8rem; line-height: 1.25; margin: 0; align-self: start; }
+.tile .value { font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; align-self: start; }
+.tile p { margin: 0; font-size: 0.72rem; font-weight: 300; line-height: 1.35; color: var(--text-muted); align-self: end; }
 
 footer { margin-top: 32px; }
 
