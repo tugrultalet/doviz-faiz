@@ -116,3 +116,5 @@ td.best .sub { color: var(--good); }
 .tile.missing .value { color: var(--text-muted); font-size: 1rem; font-weight: 500; }
 td .real { display: block; font-size: 0.8rem; color: var(--text-secondary); font-weight: 400; }
 .note { margin: 8px 0 0; color: var(--text-secondary); font-size: 0.9rem; }
+table.steps th[scope="row"] { font-weight: 500; color: var(--text-secondary); white-space: normal; min-width: 180px; }
+table.steps tr:nth-last-child(3) td, table.steps tr:last-child td { background: var(--neutral-bg); }

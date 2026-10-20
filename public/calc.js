@@ -68,14 +68,32 @@ export function netInterestFactor(annualRatePct, stopajPct, days) {
 }
 
 /**
- * Convert between TRY/USD/EUR through TL. `rates` = { USD, EUR } in TL (mid).
- * `spreadPct` is the bank's full buy/sell gap; each TL<->FX leg costs half of it.
+ * One TL<->FX conversion with its costs. `rates` = { USD, EUR } in TL (mid).
+ * `spreadPct` is the bank's full buy/sell gap; each leg costs half of it.
+ * `fxBuyTaxPct` (kambiyo vergisi / BSMV) is charged on FX purchases only, on top of the TL paid for the FX.
+ * Returns { rate, net, spreadCostTl, taxTl }: net is in the target currency.
  */
-export function convert(amount, from, to, rates, spreadPct) {
-  if (from === to) return amount;
+export function leg(amount, from, to, rates, spreadPct, fxBuyTaxPct = 0) {
   const half = spreadPct / 200;
-  const tl = from === "TRY" ? amount : amount * rates[from] * (1 - half);
-  return to === "TRY" ? tl : tl / (rates[to] * (1 + half));
+  if (from === to) return { rate: 1, net: amount, spreadCostTl: 0, taxTl: 0 };
+  if (to === "TRY") {
+    const rate = rates[from] * (1 - half);
+    return { rate, net: amount * rate, spreadCostTl: amount * rates[from] * half, taxTl: 0 };
+  }
+  if (from !== "TRY") {
+    // FX -> FX goes through TL.
+    const a = leg(amount, from, "TRY", rates, spreadPct, fxBuyTaxPct);
+    const b = leg(a.net, "TRY", to, rates, spreadPct, fxBuyTaxPct);
+    return { rate: NaN, net: b.net, spreadCostTl: a.spreadCostTl + b.spreadCostTl, taxTl: b.taxTl };
+  }
+  const rate = rates[to] * (1 + half);
+  const spent = amount / (1 + fxBuyTaxPct / 100);
+  const net = spent / rate;
+  return { rate, net, spreadCostTl: net * rates[to] * half, taxTl: amount - spent };
+}
+
+export function convert(amount, from, to, rates, spreadPct, fxBuyTaxPct = 0) {
+  return leg(amount, from, to, rates, spreadPct, fxBuyTaxPct).net;
 }
 
 export const OPTIONS = ["TRY", "BOND", "USD", "EUR"];
@@ -95,14 +113,14 @@ export function compareOptions(input) {
   for (const option of OPTIONS) {
     if (option === "BOND" && !(input.bondRate > 0)) continue;
     const held = option === "BOND" ? "TRY" : option;
-    const start = convert(amount, currency, held, now, spread);
+    const start = convert(amount, currency, held, now, spread, input.fxBuyTax);
     const factor =
       option === "TRY"
         ? netInterestFactor(input.tlRate, input.tlStopaj, days)
         : option === "BOND"
           ? netInterestFactor(input.bondRate, input.bondStopaj ?? 0, days)
           : netInterestFactor(input.fxRate, input.fxStopaj, days);
-    const final = convert(start * factor, held, currency, end, spread);
+    const final = convert(start * factor, held, currency, end, spread, input.fxBuyTax);
     const tlValue = currency === "TRY" ? final : final * end[currency];
     result[option] = {
       final,
@@ -119,11 +137,49 @@ export function compareOptions(input) {
  * FX rate at the end of the term at which holding the currency equals the TL deposit.
  * Above this rate the currency wins. Includes the round-trip spread.
  */
-export function breakEvenRate(rateNow, input) {
+export function breakEvenRate(rateNow, input, holdingFx = false) {
   const half = input.spread / 200;
+  const tax = 1 + (input.fxBuyTax ?? 0) / 100;
   const tl = netInterestFactor(input.tlRate, input.tlStopaj, input.days);
   const fx = netInterestFactor(input.fxRate, input.fxStopaj, input.days);
-  return (rateNow * tl * (1 + half)) / ((1 - half) * fx);
+  // Holding TL: buy FX now (spread + tax), sell later. Holding FX: sell now, buy back later (spread + tax).
+  return holdingFx
+    ? (rateNow * (1 - half) * tl) / ((1 + half) * tax * fx)
+    : (rateNow * (1 + half) * tax * tl) / ((1 - half) * fx);
+}
+
+/**
+ * Step-by-step round trip: leave the input currency for `via`, earn interest there, come back at the end rate.
+ * Compares the result with staying in the input currency.
+ */
+export function roundTrip(input, end, via) {
+  const { amount, currency, days, spread, now } = input;
+  const held = via === "BOND" ? "TRY" : via;
+  const terms = (option) =>
+    option === "TRY"
+      ? [input.tlRate, input.tlStopaj]
+      : option === "BOND"
+        ? [input.bondRate ?? 0, input.bondStopaj ?? 0]
+        : [input.fxRate, input.fxStopaj];
+
+  const out = leg(amount, currency, held, now, spread, input.fxBuyTax);
+  const [rate, stopaj] = terms(via);
+  const grossInterest = (out.net * rate * days) / 36500;
+  const stopajAmount = (grossInterest * stopaj) / 100;
+  const atMaturity = out.net + grossInterest - stopajAmount;
+  const back = leg(atMaturity, held, currency, end, spread, input.fxBuyTax);
+  const stay = amount * netInterestFactor(...terms(currency), days);
+  return {
+    out,
+    grossInterest,
+    stopajAmount,
+    atMaturity,
+    back,
+    final: back.net,
+    stay,
+    diff: back.net - stay,
+    diffPct: back.net / stay - 1,
+  };
 }
 
 export function projectRate(rateNow, dailyGrowth, days) {

@@ -9,6 +9,7 @@ import {
   projectRate,
   projectToTarget,
   rateDirection,
+  roundTrip,
   tlStopajForDays,
   trendStats,
 } from "./calc.js";
@@ -311,6 +312,7 @@ function readInput() {
     fxRate: num("fxRate"),
     fxStopaj: num("fxStopaj"),
     spread: num("spread"),
+    fxBuyTax: num("fxBuyTax"),
     monthlyInflation: optional("inflation"),
     expUsd: optional("expUsd"),
     bondRate: optional("bondRate"),
@@ -365,10 +367,13 @@ function renderResults() {
     })
     .join("");
 
-  const breakEven = ["USD", "EUR"]
+  const holdingFx = input.currency !== "TRY";
+  const breakEven = (holdingFx ? [input.currency] : ["USD", "EUR"])
     .map((c) => {
-      const be = breakEvenRate(now[c], input);
-      return `<li>${CURRENCIES[c].label}: kur ${input.days} gün içinde <strong>${fmtRate(be)}</strong> üstüne çıkarsa (${fmtPct(be / now[c] - 1)}) dövizde tutmak TL faizden kazançlı olur.</li>`;
+      const be = breakEvenRate(now[c], input, holdingFx);
+      return holdingFx
+        ? `<li>${CURRENCIES[c].label}: kur ${input.days} gün sonra <strong>${fmtRate(be)}</strong> altında kalırsa (${fmtPct(be / now[c] - 1)}) TL'ye geçip geri dönmek ${c}'de kalmaktan kazançlı olur.</li>`
+        : `<li>${CURRENCIES[c].label}: kur ${input.days} gün içinde <strong>${fmtRate(be)}</strong> üstüne çıkarsa (${fmtPct(be / now[c] - 1)}) dövizde tutmak TL faizden kazançlı olur.</li>`;
     })
     .join("");
 
@@ -402,6 +407,7 @@ function renderResults() {
       </table></div>
       ${realNote}
     </div>
+    ${roundTripCard(input, now, scenarios)}
     <div class="result">
       <h3>Senaryoların kur tahmini</h3>
       <div class="table-wrap"><table>
@@ -413,6 +419,54 @@ function renderResults() {
       <h3>Başabaş kur (TL faiz ile döviz eşit olur)</h3>
       <ul>${breakEven}</ul>
       <p class="muted small">TL net faiz ${input.days} gün için: ${fmtPct((input.tlRate / 100) * (input.days / 365) * (1 - input.tlStopaj / 100))} (stopaj %${nf(1).format(input.tlStopaj)} sonrası).</p>
+    </div>`;
+}
+
+/** Step-by-step table: FX amount -> TL deposit -> back to FX (or TL -> USD -> TL), one column per scenario. */
+function roundTripCard(input, now, scenarios) {
+  const cur = input.currency;
+  const via = cur === "TRY" ? "USD" : "TRY";
+  const fx = cur === "TRY" ? via : cur;
+  const trips = scenarios.map((s) => roundTrip({ ...input, now }, s.end, via));
+  const sym = (c) => SYMBOL[c];
+  const money = (v, c) => `${fmtMoney(v)} ${sym(c)}`;
+  const minus = (v, c) => (v > 0 ? `−${money(v, c)}` : "–");
+  const viaRate = via === "TRY" ? input.tlRate : input.fxRate;
+  const viaStopaj = via === "TRY" ? input.tlStopaj : input.fxStopaj;
+  const stayRate = cur === "TRY" ? input.tlRate : input.fxRate;
+  const stayStopaj = cur === "TRY" ? input.tlStopaj : input.fxStopaj;
+  const outLabel = cur === "TRY" ? `${fx} alım kuru (banka satış, bugün)` : `${fx} bozdurma kuru (banka alış, bugün)`;
+  const backLabel = cur === "TRY" ? `${fx} bozdurma kuru (banka alış, vade sonu)` : `${fx} alım kuru (banka satış, vade sonu)`;
+
+  const rows = [
+    ["Başlangıç", () => money(input.amount, cur)],
+    [outLabel, (t) => fmtRate(t.out.rate)],
+    [`Makas maliyeti (${cur === "TRY" ? "alış" : "bozdurma"})`, (t) => minus(t.out.spreadCostTl, "TRY")],
+    ["Kambiyo vergisi", (t) => minus(t.out.taxTl, "TRY")],
+    [`${sym(via)}'ye geçen tutar`, (t) => money(t.out.net, via)],
+    [`Brüt faiz (%${nf(2).format(viaRate)}, ${input.days} gün)`, (t) => `+${money(t.grossInterest, via)}`],
+    [`Stopaj (%${nf(1).format(viaStopaj)})`, (t) => minus(t.stopajAmount, via)],
+    ["Vade sonu tutar", (t) => money(t.atMaturity, via)],
+    [`${fx}/TRY tahmini (vade sonu)`, (_, s) => fmtRate(s.end[fx])],
+    [backLabel, (t) => fmtRate(t.back.rate)],
+    [`Makas maliyeti (${cur === "TRY" ? "bozdurma" : "geri alış"})`, (t) => minus(t.back.spreadCostTl, "TRY")],
+    ["Kambiyo vergisi", (t) => minus(t.back.taxTl, "TRY")],
+    ["Elinize geçen", (t) => `<strong>${money(t.final, cur)}</strong>`],
+    [`${sym(cur)}'de kalsaydınız (%${nf(2).format(stayRate)}, stopaj %${nf(1).format(stayStopaj)} sonrası)`, (t) => money(t.stay, cur)],
+    ["Fark", (t) => `<strong>${t.diff >= 0 ? "+" : "−"}${money(Math.abs(t.diff), cur)}</strong><span class="sub">${fmtPct(t.diffPct)}</span>`],
+  ];
+  const body = rows
+    .map(([label, cell]) => `<tr><th scope="row">${label}</th>${trips.map((t, i) => `<td>${cell(t, scenarios[i])}</td>`).join("")}</tr>`)
+    .join("");
+  const title = `${sym(cur)} → ${via === "TRY" ? "TL mevduat" : `${via} mevduat`} → ${sym(cur)} döngüsü`;
+  return `
+    <div class="result">
+      <h3>${title} (adım adım)</h3>
+      <div class="table-wrap"><table class="steps">
+        <thead><tr><th></th>${scenarios.map((s) => `<th>${s.title}</th>`).join("")}</tr></thead>
+        <tbody>${body}</tbody>
+      </table></div>
+      <p class="muted small">Pozitif fark: döngü ${sym(cur)}'de kalmaktan daha kazançlı. Kambiyo vergisi yalnızca döviz alırken ödenir.</p>
     </div>`;
 }
 

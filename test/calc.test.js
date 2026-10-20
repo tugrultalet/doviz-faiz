@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  roundTrip,
   breakEvenRate,
   changeOver,
   daysUntilYearEnd,
@@ -205,5 +206,56 @@ describe("indicator helpers", () => {
 
   it("ranks a value in its history", () => {
     expect(percentileOf(monthly([1, 2, 3, 4]), 3)).toBe(0.75);
+  });
+});
+
+describe("roundTrip (100,000 USD -> TL deposit -> USD)", () => {
+  const input = {
+    amount: 100_000,
+    currency: "USD",
+    days: 32,
+    tlRate: 36,
+    tlStopaj: 17.5,
+    fxRate: 4,
+    fxStopaj: 25,
+    spread: 1,
+    fxBuyTax: 0.2,
+    now: { USD: 42, EUR: 49 },
+  };
+  const end = { USD: 43, EUR: 49 };
+  const r = roundTrip(input, end, "TRY");
+
+  it("walks every step by hand", () => {
+    const tl = 100_000 * 42 * 0.995; // sell USD at the bank's buying rate
+    expect(r.out.net).toBeCloseTo(tl, 6);
+    expect(r.out.spreadCostTl).toBeCloseTo(100_000 * 42 * 0.005, 6);
+    expect(r.grossInterest).toBeCloseTo((tl * 0.36 * 32) / 365, 6);
+    expect(r.stopajAmount).toBeCloseTo(r.grossInterest * 0.175, 6);
+    const maturity = tl + r.grossInterest * 0.825;
+    expect(r.atMaturity).toBeCloseTo(maturity, 6);
+    // buy USD back at the selling rate, paying 0.2% kambiyo vergisi on the purchase
+    expect(r.back.taxTl).toBeCloseTo(maturity - maturity / 1.002, 6);
+    expect(r.final).toBeCloseTo(maturity / 1.002 / (43 * 1.005), 6);
+    expect(r.stay).toBeCloseTo(100_000 * (1 + 0.04 * (32 / 365) * 0.75), 6);
+    expect(r.diff).toBeCloseTo(r.final - r.stay, 6);
+  });
+
+  it("matches compareOptions", () => {
+    const c = compareOptions({ ...input, end });
+    expect(c.TRY.final).toBeCloseTo(r.final, 6);
+    expect(c.USD.final).toBeCloseTo(r.stay, 6);
+  });
+
+  it("break-even for an FX holder makes both paths equal", () => {
+    const be = breakEvenRate(42, input, true);
+    const atBe = roundTrip(input, { USD: be, EUR: 49 }, "TRY");
+    expect(atBe.final).toBeCloseTo(atBe.stay, 4);
+  });
+
+  it("break-even for a TL holder includes the purchase tax", () => {
+    const tlInput = { ...input, amount: 4_200_000, currency: "TRY" };
+    const be = breakEvenRate(42, tlInput, false);
+    const atBe = roundTrip(tlInput, { USD: be, EUR: 49 }, "USD");
+    expect(atBe.final).toBeCloseTo(atBe.stay, 2);
   });
 });
