@@ -21,8 +21,8 @@ if (key) {
     }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Mevduat (Kurumsal Sektörlere Göre)", "Yurt İçi Yerleşik Özel Sektorun Döviz Tevdiat"],
-        ["Merkez Bankası Rezervleri", "Toplam"],
+        ["Altın", ""],
+        ["Kıymetli Maden", "Altın"],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();
