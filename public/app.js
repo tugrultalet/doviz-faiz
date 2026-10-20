@@ -6,6 +6,8 @@ import {
   percentileOf,
   projectRate,
   equivalents,
+  paritySeries,
+  realRate,
   formatAmountInput,
   parseAmount,
   rateDirection,
@@ -275,6 +277,39 @@ function renderIndicators() {
     tile("bondYield", "Tahvil / bono faizi", bond && `<div class="value">%${nf(2).format(bond.value)}</div><p>${fmtDate(bond.date)}</p>`),
   );
 
+  // Real TL rate: the TL deposit rate in the form, after stopaj, against last year's inflation.
+  if (inf?.annual != null) {
+    const input = readInput();
+    const net = (input.tlRate / 100) * (1 - input.tlStopaj / 100);
+    const real = realRate(net, inf.annual);
+    tiles.push(
+      tile(
+        "realRate",
+        "Reel TL faizi (yıllık)",
+        `<div class="value">${fmtPct(real, 1)}</div>
+         <p>Net faiz %${nf(1).format(net * 100)} − yıllık enflasyon %${nf(1).format(inf.annual * 100)}. ${
+           real >= 0 ? "TL faizi enflasyonu geçiyor." : "TL faizi enflasyonun altında."
+         }</p>`,
+      ),
+    );
+  }
+
+  const parity = fxData && paritySeries(fxData.eur, fxData.usd);
+  if (parity?.length > 30) {
+    const m = changeOver(parity, 30);
+    const y = changeOver(parity, 365);
+    tiles.push(
+      tile(
+        "parity",
+        "EUR/USD paritesi",
+        `<div class="value">${nf(4).format(m.last.value)}</div>
+         <p>30 günde ${fmtPct(m.pct)} · 1 yılda ${fmtPct(y.pct, 1)}. ${
+           m.pct >= 0 ? "Euro dolara göre değer kazanıyor." : "Euro dolara göre değer kaybediyor."
+         }</p>`,
+      ),
+    );
+  }
+
   $("indicator-tiles").innerHTML = tiles.join("");
 }
 
@@ -455,6 +490,7 @@ function buildScenarios(input, now) {
 
 function render() {
   if (!stats) return;
+  renderIndicators();
   const input = readInput();
   if (input.amount <= 0) {
     $("result").innerHTML = `<div class="card"><p class="muted">Bir tutar girin.</p></div>`;

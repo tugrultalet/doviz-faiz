@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  paritySeries,
+  realRate,
   formatAmountInput,
   parseAmount,
   equivalents,
@@ -332,5 +334,18 @@ describe("amount input", () => {
     expect(parseAmount("1.000.000")).toBe(1_000_000);
     expect(parseAmount("250.000,50")).toBe(250_000.5);
     expect(parseAmount("")).toBe(0);
+  });
+});
+
+describe("realRate and paritySeries", () => {
+  it("deflates a nominal return by inflation", () => {
+    expect(realRate(0.325, 0.221)).toBeCloseTo(1.325 / 1.221 - 1, 12);
+    expect(realRate(0.1, 0.2)).toBeLessThan(0);
+  });
+
+  it("divides EUR/TRY by USD/TRY on matching dates only", () => {
+    const eur = [{ date: "2026-10-19", value: 58 }, { date: "2026-10-20", value: 58.5 }];
+    const usd = [{ date: "2026-10-20", value: 50 }];
+    expect(paritySeries(eur, usd)).toEqual([{ date: "2026-10-20", value: 1.17 }]);
   });
 });

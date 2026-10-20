@@ -235,3 +235,14 @@ export function formatAmountInput(text) {
   const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   return rest.length ? `${grouped || "0"},${rest.join("").slice(0, 2)}` : grouped;
 }
+
+/** Real rate: what a nominal annual return is worth after annual inflation (both as fractions). */
+export function realRate(nominal, inflation) {
+  return (1 + nominal) / (1 + inflation) - 1;
+}
+
+/** EUR/USD parity series from EUR/TRY and USD/TRY on matching dates. */
+export function paritySeries(eur, usd) {
+  const usdByDate = new Map(usd.map((p) => [p.date, p.value]));
+  return eur.filter((p) => usdByDate.has(p.date)).map((p) => ({ date: p.date, value: p.value / usdByDate.get(p.date) }));
+}
