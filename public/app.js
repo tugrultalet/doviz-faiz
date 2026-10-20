@@ -9,14 +9,13 @@ import {
   projectRate,
   projectToTarget,
   rateDirection,
-  roundTrip,
   tlStopajForDays,
   trendStats,
 } from "./calc.js";
 
 const $ = (id) => document.getElementById(id);
 const CURRENCIES = { USD: { label: "Dolar", color: "--series-usd" }, EUR: { label: "Euro", color: "--series-eur" } };
-const OPTION_LABELS = { TRY: "TL mevduatta tut", BOND: "Tahvil / bonoda tut", USD: "Dolarda tut", EUR: "Euroda tut" };
+const OPTION_LABELS = { TRY: "TL'de faizde tut", BOND: "Tahvil / bonoda tut", USD: "Dolarda dur", EUR: "Euroda dur" };
 const VERDICT = {
   faster: "↑ Hızlandı",
   slower: "↓ Yavaşladı",
@@ -309,7 +308,8 @@ function readInput() {
     days: Math.max(1, num("days")),
     tlRate: num("tlRate"),
     tlStopaj: num("tlStopaj"),
-    fxRate: num("fxRate"),
+    usdRate: num("usdRate"),
+    eurRate: num("eurRate"),
     fxStopaj: num("fxStopaj"),
     spread: num("spread"),
     fxBuyTax: num("fxBuyTax"),
@@ -339,51 +339,49 @@ function renderResults() {
     scenarios.push({ title: "Piyasa beklentisi gerçekleşirse", end: { USD: usd, EUR: (usd * now.EUR) / now.USD } });
   }
   scenarios.push({ title: "Kur sabit kalırsa", end: { ...now } });
-  for (const sc of scenarios) sc.result = compareOptions({ ...input, now, end: sc.end });
+  for (const sc of scenarios) {
+    sc.result = compareOptions({ ...input, now, end: sc.end });
+    sc.best = bestOption(sc.result);
+  }
 
   const cur = SYMBOL[input.currency];
-  const head = scenarios.map((s) => `<th>${s.title}</th>`).join("");
   const options = OPTIONS.filter((o) => scenarios[0].result[o]);
-  const rows = options
-    .map((opt) => {
-      const cells = scenarios
-        .map((s) => {
-          const r = s.result[opt];
-          const best = bestOption(s.result) === opt;
-          const tl = input.currency === "TRY" ? "" : `<span class="sub">≈ ${fmtMoney(r.tlValue)} TL</span>`;
-          const real = r.realPct == null ? "" : `<span class="real">Reel: ${fmtPct(r.realPct)}</span>`;
-          return `<td class="${best ? "best" : ""}">${best ? "★ " : ""}${fmtMoney(r.final)} ${cur}
-            <span class="sub">${fmtPct(r.gainPct)} · ${r.gain >= 0 ? "+" : ""}${fmtMoney(r.gain)} ${cur}</span>${tl}${real}</td>`;
-        })
-        .join("");
-      return `<tr><th scope="row">${OPTION_LABELS[opt]}</th>${cells}</tr>`;
+  const head = scenarios.map((s) => `<th>${s.title}</th>`).join("");
+
+  $("results").innerHTML = `
+    ${recommendationCard(input, scenarios)}
+    <div class="result">
+      <h3>${input.days} gün sonra elinizdeki tutar (${cur}, masraf, vergi ve stopaj sonrası)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th></th>${head}</tr></thead>
+        <tbody>${options.map((opt) => summaryRow(opt, input, scenarios)).join("")}</tbody>
+      </table></div>
+      ${
+        input.monthlyInflation == null
+          ? ""
+          : `<p class="muted small">Reel getiri: TL bazında, aylık %${nf(2).format(input.monthlyInflation)} enflasyon sonrası. Negatif değer alım gücü kaybıdır.</p>`
+      }
+    </div>
+    <h3 class="section-title">Seçeneklerin adım adım hesabı</h3>
+    ${options.map((opt) => optionCard(opt, input, scenarios)).join("")}
+    ${ratesCard(input, now, scenarios)}`;
+}
+
+function recommendationCard(input, scenarios) {
+  const cur = SYMBOL[input.currency];
+  const [year, month] = scenarios;
+  const headline =
+    year.best === month.best
+      ? `Öneri: <strong>${OPTION_LABELS[year.best]}</strong>
+         <p class="note">İki kur trendi de bu seçeneği gösteriyor.</p>`
+      : `Net öneri yok
+         <p class="note">1 yıllık trende göre <strong>${OPTION_LABELS[year.best]}</strong>, son 30 günlük trende göre <strong>${OPTION_LABELS[month.best]}</strong> daha kazançlı.</p>`;
+  const list = scenarios
+    .map((s) => {
+      const r = s.result[s.best];
+      return `<li>${s.title}: <strong>${OPTION_LABELS[s.best]}</strong> → ${fmtMoney(r.final)} ${cur} (${fmtPct(r.gainPct)})</li>`;
     })
     .join("");
-
-  const rateRows = ["USD", "EUR"]
-    .map((c) => {
-      const cells = scenarios.map((s) => `<td>${fmtRate(s.end[c])}</td>`).join("");
-      return `<tr><th scope="row">${c}/TRY ${input.days} gün sonra</th>${cells}</tr>`;
-    })
-    .join("");
-
-  const holdingFx = input.currency !== "TRY";
-  const breakEven = (holdingFx ? [input.currency] : ["USD", "EUR"])
-    .map((c) => {
-      const be = breakEvenRate(now[c], input, holdingFx);
-      return holdingFx
-        ? `<li>${CURRENCIES[c].label}: kur ${input.days} gün sonra <strong>${fmtRate(be)}</strong> altında kalırsa (${fmtPct(be / now[c] - 1)}) TL'ye geçip geri dönmek ${c}'de kalmaktan kazançlı olur.</li>`
-        : `<li>${CURRENCIES[c].label}: kur ${input.days} gün içinde <strong>${fmtRate(be)}</strong> üstüne çıkarsa (${fmtPct(be / now[c] - 1)}) dövizde tutmak TL faizden kazançlı olur.</li>`;
-    })
-    .join("");
-
-  const trendBest = [bestOption(scenarios[0].result), bestOption(scenarios[1].result)];
-  let summary =
-    trendBest[0] === trendBest[1]
-      ? `İki trend senaryosunda da en iyi seçenek: <strong>${OPTION_LABELS[trendBest[0]]}</strong>.`
-      : `Senaryolar farklı sonuç veriyor: 1 yıllık trende göre <strong>${OPTION_LABELS[trendBest[0]]}</strong>, son 30 günlük trende göre <strong>${OPTION_LABELS[trendBest[1]]}</strong>.`;
-  if (input.expUsd > 0) summary += ` Piyasa beklentisine göre: <strong>${OPTION_LABELS[bestOption(scenarios[2].result)]}</strong>.`;
-
   const fc = pointsOf("fundingCost");
   const dir = fc && rateDirection(fc, 90);
   const rateNote =
@@ -392,22 +390,105 @@ function renderResults() {
       : dir?.direction === "up"
         ? `<p class="note">Faizler yükseliş döneminde. Kısa vade, yükselen faizden faydalanmanızı sağlar.</p>`
         : "";
-  const realNote =
-    input.monthlyInflation == null
-      ? ""
-      : `<p class="muted small">Reel getiri: TL bazında, aylık %${nf(2).format(input.monthlyInflation)} enflasyon sonrası. Negatif değer alım gücü kaybıdır.</p>`;
+  return `<div class="result summary">${headline}<ul class="picks">${list}</ul>${rateNote}</div>`;
+}
 
-  $("results").innerHTML = `
-    <div class="result summary">${summary}${rateNote}</div>
-    <div class="result">
-      <h3>${input.days} gün sonra elinizdeki tutar (${cur}, masraf ve stopaj sonrası)</h3>
-      <div class="table-wrap"><table>
-        <thead><tr><th></th>${head}</tr></thead>
-        <tbody>${rows}</tbody>
+function summaryRow(opt, input, scenarios) {
+  const cur = SYMBOL[input.currency];
+  const cells = scenarios
+    .map((s) => {
+      const r = s.result[opt];
+      const best = s.best === opt;
+      const tl = input.currency === "TRY" ? "" : `<span class="sub">≈ ${fmtMoney(r.tlValue)} TL</span>`;
+      const real = r.realPct == null ? "" : `<span class="real">Reel: ${fmtPct(r.realPct)}</span>`;
+      return `<td class="${best ? "best" : ""}">${best ? "★ " : ""}${fmtMoney(r.final)} ${cur}
+        <span class="sub">${fmtPct(r.gainPct)} · ${r.gain >= 0 ? "+" : ""}${fmtMoney(r.gain)} ${cur}</span>${tl}${real}</td>`;
+    })
+    .join("");
+  return `<tr><th scope="row">${OPTION_LABELS[opt]}</th>${cells}</tr>`;
+}
+
+/** One option, step by step: convert today, earn interest, convert back at the forecast rate. */
+function optionCard(opt, input, scenarios) {
+  const cur = input.currency;
+  const trips = scenarios.map((s) => s.result[opt].trip);
+  const held = trips[0].held;
+  const converts = held !== cur;
+  const heldName = opt === "BOND" ? "tahvil/bono (TL)" : held === "TRY" ? "TL mevduat" : `${held} mevduat`;
+  const money = (v, c) => `${fmtMoney(v)} ${SYMBOL[c]}`;
+  const minus = (v) => (v > 0 ? `−${money(v, "TRY")}` : "–");
+  const outLabel =
+    cur === "TRY"
+      ? `${held} alım kuru (banka satış, bugün)`
+      : held === "TRY"
+        ? `${cur} bozdurma kuru (banka alış, bugün)`
+        : `${cur} → ${held} çevrim oranı (masraflar dahil)`;
+  const backLabel =
+    held === "TRY"
+      ? `${cur} alım kuru (banka satış, vade sonu)`
+      : cur === "TRY"
+        ? `${held} bozdurma kuru (banka alış, vade sonu)`
+        : `${held} → ${cur} çevrim oranı (masraflar dahil)`;
+  const fxs = [...new Set([cur, held].filter((c) => c !== "TRY"))];
+
+  const rows = [["Başlangıç", () => money(input.amount, cur)]];
+  if (converts) {
+    rows.push(
+      [outLabel, (t) => fmtRate(t.out.rate)],
+      ["Makas maliyeti", (t) => minus(t.out.spreadCostTl)],
+      ["Kambiyo vergisi", (t) => minus(t.out.taxTl)],
+      [`${SYMBOL[held]} tutarı`, (t) => money(t.out.net, held)],
+    );
+  }
+  rows.push(
+    [`Brüt faiz (%${nf(2).format(trips[0].rate)}, ${input.days} gün)`, (t) => `+${money(t.grossInterest, held)}`],
+    [`Stopaj (%${nf(1).format(trips[0].stopaj)})`, (t) => (t.stopajAmount > 0 ? `−${money(t.stopajAmount, held)}` : "–")],
+    ["Vade sonu tutar", (t) => money(t.atMaturity, held)],
+  );
+  if (converts) {
+    for (const c of fxs) rows.push([`${c}/TRY tahmini (vade sonu)`, (_, s) => fmtRate(s.end[c])]);
+    rows.push(
+      [backLabel, (t) => fmtRate(t.back.rate)],
+      ["Makas maliyeti", (t) => minus(t.back.spreadCostTl)],
+      ["Kambiyo vergisi", (t) => minus(t.back.taxTl)],
+    );
+  }
+  rows.push(
+    [`Elinize geçen (${SYMBOL[cur]})`, (t) => `<strong>${money(t.final, cur)}</strong>`],
+    ["Başlangıca göre", (t) => `${t.final >= input.amount ? "+" : "−"}${money(Math.abs(t.final - input.amount), cur)}<span class="sub">${fmtPct(t.final / input.amount - 1)}</span>`],
+  );
+
+  const body = rows
+    .map(([label, cell]) => `<tr><th scope="row">${label}</th>${trips.map((t, i) => `<td>${cell(t, scenarios[i])}</td>`).join("")}</tr>`)
+    .join("");
+  const path = converts ? `${SYMBOL[cur]} → ${heldName} → ${SYMBOL[cur]}` : `${heldName}, çevrim yok`;
+  const wins = scenarios.filter((s) => s.best === opt).length;
+  const badge = wins ? `<span class="badge">★ ${wins} senaryoda en iyi</span>` : "";
+  return `
+    <details class="result option"${scenarios[0].best === opt ? " open" : ""}>
+      <summary><span><strong>${OPTION_LABELS[opt]}</strong> <span class="muted">(${path})</span></span>${badge}</summary>
+      <div class="table-wrap"><table class="steps">
+        <thead><tr><th></th>${scenarios.map((s) => `<th>${s.title}</th>`).join("")}</tr></thead>
+        <tbody>${body}</tbody>
       </table></div>
-      ${realNote}
-    </div>
-    ${roundTripCard(input, now, scenarios)}
+    </details>`;
+}
+
+function ratesCard(input, now, scenarios) {
+  const head = scenarios.map((s) => `<th>${s.title}</th>`).join("");
+  const rateRows = ["USD", "EUR"]
+    .map((c) => `<tr><th scope="row">${c}/TRY ${input.days} gün sonra</th>${scenarios.map((s) => `<td>${fmtRate(s.end[c])}</td>`).join("")}</tr>`)
+    .join("");
+  const holdingFx = input.currency !== "TRY";
+  const breakEven = (holdingFx ? [input.currency] : ["USD", "EUR"])
+    .map((c) => {
+      const be = breakEvenRate(now[c], input, holdingFx, c);
+      return holdingFx
+        ? `<li>${CURRENCIES[c].label}: kur ${input.days} gün sonra <strong>${fmtRate(be)}</strong> altında kalırsa (${fmtPct(be / now[c] - 1)}) TL'ye geçip geri dönmek ${c}'de kalmaktan kazançlı olur.</li>`
+        : `<li>${CURRENCIES[c].label}: kur ${input.days} gün içinde <strong>${fmtRate(be)}</strong> üstüne çıkarsa (${fmtPct(be / now[c] - 1)}) ${c}'de durmak TL faizden kazançlı olur.</li>`;
+    })
+    .join("");
+  return `
     <div class="result">
       <h3>Senaryoların kur tahmini</h3>
       <div class="table-wrap"><table>
@@ -418,55 +499,7 @@ function renderResults() {
     <div class="result">
       <h3>Başabaş kur (TL faiz ile döviz eşit olur)</h3>
       <ul>${breakEven}</ul>
-      <p class="muted small">TL net faiz ${input.days} gün için: ${fmtPct((input.tlRate / 100) * (input.days / 365) * (1 - input.tlStopaj / 100))} (stopaj %${nf(1).format(input.tlStopaj)} sonrası).</p>
-    </div>`;
-}
-
-/** Step-by-step table: FX amount -> TL deposit -> back to FX (or TL -> USD -> TL), one column per scenario. */
-function roundTripCard(input, now, scenarios) {
-  const cur = input.currency;
-  const via = cur === "TRY" ? "USD" : "TRY";
-  const fx = cur === "TRY" ? via : cur;
-  const trips = scenarios.map((s) => roundTrip({ ...input, now }, s.end, via));
-  const sym = (c) => SYMBOL[c];
-  const money = (v, c) => `${fmtMoney(v)} ${sym(c)}`;
-  const minus = (v, c) => (v > 0 ? `−${money(v, c)}` : "–");
-  const viaRate = via === "TRY" ? input.tlRate : input.fxRate;
-  const viaStopaj = via === "TRY" ? input.tlStopaj : input.fxStopaj;
-  const stayRate = cur === "TRY" ? input.tlRate : input.fxRate;
-  const stayStopaj = cur === "TRY" ? input.tlStopaj : input.fxStopaj;
-  const outLabel = cur === "TRY" ? `${fx} alım kuru (banka satış, bugün)` : `${fx} bozdurma kuru (banka alış, bugün)`;
-  const backLabel = cur === "TRY" ? `${fx} bozdurma kuru (banka alış, vade sonu)` : `${fx} alım kuru (banka satış, vade sonu)`;
-
-  const rows = [
-    ["Başlangıç", () => money(input.amount, cur)],
-    [outLabel, (t) => fmtRate(t.out.rate)],
-    [`Makas maliyeti (${cur === "TRY" ? "alış" : "bozdurma"})`, (t) => minus(t.out.spreadCostTl, "TRY")],
-    ["Kambiyo vergisi", (t) => minus(t.out.taxTl, "TRY")],
-    [`${sym(via)}'ye geçen tutar`, (t) => money(t.out.net, via)],
-    [`Brüt faiz (%${nf(2).format(viaRate)}, ${input.days} gün)`, (t) => `+${money(t.grossInterest, via)}`],
-    [`Stopaj (%${nf(1).format(viaStopaj)})`, (t) => minus(t.stopajAmount, via)],
-    ["Vade sonu tutar", (t) => money(t.atMaturity, via)],
-    [`${fx}/TRY tahmini (vade sonu)`, (_, s) => fmtRate(s.end[fx])],
-    [backLabel, (t) => fmtRate(t.back.rate)],
-    [`Makas maliyeti (${cur === "TRY" ? "bozdurma" : "geri alış"})`, (t) => minus(t.back.spreadCostTl, "TRY")],
-    ["Kambiyo vergisi", (t) => minus(t.back.taxTl, "TRY")],
-    ["Elinize geçen", (t) => `<strong>${money(t.final, cur)}</strong>`],
-    [`${sym(cur)}'de kalsaydınız (%${nf(2).format(stayRate)}, stopaj %${nf(1).format(stayStopaj)} sonrası)`, (t) => money(t.stay, cur)],
-    ["Fark", (t) => `<strong>${t.diff >= 0 ? "+" : "−"}${money(Math.abs(t.diff), cur)}</strong><span class="sub">${fmtPct(t.diffPct)}</span>`],
-  ];
-  const body = rows
-    .map(([label, cell]) => `<tr><th scope="row">${label}</th>${trips.map((t, i) => `<td>${cell(t, scenarios[i])}</td>`).join("")}</tr>`)
-    .join("");
-  const title = `${sym(cur)} → ${via === "TRY" ? "TL mevduat" : `${via} mevduat`} → ${sym(cur)} döngüsü`;
-  return `
-    <div class="result">
-      <h3>${title} (adım adım)</h3>
-      <div class="table-wrap"><table class="steps">
-        <thead><tr><th></th>${scenarios.map((s) => `<th>${s.title}</th>`).join("")}</tr></thead>
-        <tbody>${body}</tbody>
-      </table></div>
-      <p class="muted small">Pozitif fark: döngü ${sym(cur)}'de kalmaktan daha kazançlı. Kambiyo vergisi yalnızca döviz alırken ödenir.</p>
+      <p class="muted small">Makas ve kambiyo vergisi dahildir. Kambiyo vergisi yalnızca döviz alırken ödenir.</p>
     </div>`;
 }
 

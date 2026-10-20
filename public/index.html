@@ -60,9 +60,13 @@
           <input id="tlStopaj" type="number" step="0.5" min="0" max="100" />
           <span class="hint">Vadeye göre otomatik dolar. Değiştirebilirsiniz.</span>
         </label>
-        <label>Döviz mevduat faizi (yıllık %)
-          <input id="fxRate" type="number" step="0.01" min="0" value="0" />
-          <span class="hint">Döviz vadesiz ise 0 bırakın.</span>
+        <label>Dolar mevduat faizi (yıllık %)
+          <input id="usdRate" type="number" step="0.01" min="0" value="0" />
+          <span class="hint">Bankanızın USD vadeli oranı. Vadesiz ise 0.</span>
+        </label>
+        <label>Euro mevduat faizi (yıllık %)
+          <input id="eurRate" type="number" step="0.01" min="0" value="0" />
+          <span class="hint">Bankanızın EUR vadeli oranı. Vadesiz ise 0.</span>
         </label>
         <label>Döviz stopaj (%)
           <input id="fxStopaj" type="number" step="0.5" min="0" max="100" value="25" />

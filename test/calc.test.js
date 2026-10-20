@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   roundTrip,
+  terms,
   breakEvenRate,
   changeOver,
   daysUntilYearEnd,
@@ -216,7 +217,8 @@ describe("roundTrip (100,000 USD -> TL deposit -> USD)", () => {
     days: 32,
     tlRate: 36,
     tlStopaj: 17.5,
-    fxRate: 4,
+    usdRate: 4,
+    eurRate: 2,
     fxStopaj: 25,
     spread: 1,
     fxBuyTax: 0.2,
@@ -224,6 +226,7 @@ describe("roundTrip (100,000 USD -> TL deposit -> USD)", () => {
   };
   const end = { USD: 43, EUR: 49 };
   const r = roundTrip(input, end, "TRY");
+  const stay = roundTrip(input, end, "USD");
 
   it("walks every step by hand", () => {
     const tl = 100_000 * 42 * 0.995; // sell USD at the bank's buying rate
@@ -236,26 +239,61 @@ describe("roundTrip (100,000 USD -> TL deposit -> USD)", () => {
     // buy USD back at the selling rate, paying 0.2% kambiyo vergisi on the purchase
     expect(r.back.taxTl).toBeCloseTo(maturity - maturity / 1.002, 6);
     expect(r.final).toBeCloseTo(maturity / 1.002 / (43 * 1.005), 6);
-    expect(r.stay).toBeCloseTo(100_000 * (1 + 0.04 * (32 / 365) * 0.75), 6);
-    expect(r.diff).toBeCloseTo(r.final - r.stay, 6);
+  });
+
+  it("staying in USD earns the USD rate with no conversion cost", () => {
+    expect(stay.out.spreadCostTl).toBe(0);
+    expect(stay.final).toBeCloseTo(100_000 * (1 + 0.04 * (32 / 365) * 0.75), 6);
   });
 
   it("matches compareOptions", () => {
     const c = compareOptions({ ...input, end });
     expect(c.TRY.final).toBeCloseTo(r.final, 6);
-    expect(c.USD.final).toBeCloseTo(r.stay, 6);
+    expect(c.USD.final).toBeCloseTo(stay.final, 6);
   });
 
   it("break-even for an FX holder makes both paths equal", () => {
     const be = breakEvenRate(42, input, true);
-    const atBe = roundTrip(input, { USD: be, EUR: 49 }, "TRY");
-    expect(atBe.final).toBeCloseTo(atBe.stay, 4);
+    const e = { USD: be, EUR: 49 };
+    expect(roundTrip(input, e, "TRY").final).toBeCloseTo(roundTrip(input, e, "USD").final, 4);
   });
 
   it("break-even for a TL holder includes the purchase tax", () => {
     const tlInput = { ...input, amount: 4_200_000, currency: "TRY" };
-    const be = breakEvenRate(42, tlInput, false);
-    const atBe = roundTrip(tlInput, { USD: be, EUR: 49 }, "USD");
-    expect(atBe.final).toBeCloseTo(atBe.stay, 2);
+    const be = breakEvenRate(42, tlInput, false, "USD");
+    const e = { USD: be, EUR: 49 };
+    expect(roundTrip(tlInput, e, "USD").final).toBeCloseTo(roundTrip(tlInput, e, "TRY").final, 2);
+  });
+});
+
+describe("roundTrip (EUR -> USD -> EUR)", () => {
+  it("earns the USD rate and USD rise, then converts back to EUR", () => {
+    const input = {
+      amount: 10_000,
+      currency: "EUR",
+      days: 30,
+      tlRate: 36,
+      tlStopaj: 17.5,
+      usdRate: 4,
+      eurRate: 2,
+      fxStopaj: 25,
+      spread: 0,
+      fxBuyTax: 0,
+      now: { USD: 40, EUR: 48 },
+    };
+    const end = { USD: 42, EUR: 48 };
+    const r = roundTrip(input, end, "USD");
+    const usd = (10_000 * 48) / 40;
+    expect(r.out.net).toBeCloseTo(usd, 6);
+    expect(r.out.rate).toBeCloseTo(1.2, 10); // effective EUR->USD
+    expect(r.final).toBeCloseTo((usd * netInterestFactor(4, 25, 30) * 42) / 48, 6);
+    expect(roundTrip(input, end, "EUR").final).toBeCloseTo(10_000 * netInterestFactor(2, 25, 30), 6);
+  });
+});
+
+describe("terms", () => {
+  it("uses separate USD and EUR rates with fxRate as fallback", () => {
+    expect(terms({ usdRate: 4, eurRate: 2, fxStopaj: 25 }, "EUR")).toEqual([2, 25]);
+    expect(terms({ fxRate: 3, fxStopaj: 25 }, "USD")).toEqual([3, 25]);
   });
 });
