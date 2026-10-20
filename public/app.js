@@ -119,12 +119,28 @@ function applyTheme() {
   if (fxData) renderCharts(fxData); // charts read colors from CSS
 }
 
+// iOS Safari ignores overflow:hidden on body, so pin the page with position:fixed while the modal is open.
+let lockedScrollY = 0;
+const blockScroll = (e) => e.preventDefault();
+function lockPage() {
+  lockedScrollY = window.scrollY;
+  document.documentElement.classList.add("modal-open");
+  Object.assign(document.body.style, { position: "fixed", top: `-${lockedScrollY}px`, left: "0", right: "0", width: "100%" });
+  document.addEventListener("touchmove", blockScroll, { passive: false });
+}
+function unlockPage() {
+  document.documentElement.classList.remove("modal-open");
+  Object.assign(document.body.style, { position: "", top: "", left: "", right: "", width: "" });
+  document.removeEventListener("touchmove", blockScroll);
+  window.scrollTo(0, lockedScrollY);
+}
+
 $("open-settings").addEventListener("click", () => {
   fillSettingsForm();
-  document.documentElement.classList.add("modal-open"); // lock the page behind the modal
+  lockPage();
   $("settings").showModal();
 });
-$("settings").addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
+$("settings").addEventListener("close", unlockPage);
 $("settings").addEventListener("click", (e) => {
   if (e.target === $("settings")) $("settings").close(); // click on backdrop
 });

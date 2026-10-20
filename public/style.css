@@ -179,7 +179,7 @@ dialog {
   border: 1px solid var(--border); border-radius: 16px; padding: 0;
   background: var(--surface-1); color: var(--text-primary);
 }
-dialog::backdrop { background: rgb(0 0 0 / 0.45); }
+dialog::backdrop { background: rgb(0 0 0 / 0.7); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
 dialog form { padding: 16px 20px 20px; }
 .dialog-head { display: flex; justify-content: space-between; align-items: center; }
 .dialog-head h2 { margin: 0; }
