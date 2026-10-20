@@ -1,4 +1,5 @@
 import {
+  OPTIONS,
   breakEvenRate,
   changeOver,
   compareOptions,
@@ -546,7 +547,8 @@ function render() {
   const lead = second
     ? `${OPTION_LABELS[second]} seçeneğinden ${fmtMoney(b.final - sc.result[second].final)} ${cur} fazla.`
     : "";
-  const options = sc.ranking
+  // Fixed order (TL, bond if set, USD, EUR); the best option is highlighted, not moved.
+  const options = OPTIONS.filter((opt) => sc.result[opt])
     .map((opt) => {
       const r = sc.result[opt];
       const real = r.realPct == null ? "" : `<span class="real">reel ${fmtPct(r.realPct)}</span>`;
