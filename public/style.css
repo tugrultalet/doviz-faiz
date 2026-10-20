@@ -216,6 +216,7 @@ dialog h3 { margin: 18px 0 8px; }
   .big-field input { font-size: 1.05rem; }
 }
 
+html.modal-open, html.modal-open body { overflow: hidden; touch-action: none; overscroll-behavior: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .dialog-head { gap: 10px; }
 .dialog-head .theme { margin: 0 0 0 auto; }
@@ -223,8 +224,16 @@ dialog h3 { margin: 18px 0 8px; }
 /* Settings modal on phones: compact two-column sheet that fits one screen without scrolling.
    Inputs may go below 16px here because the viewport is locked to scale 1 (no iOS focus zoom). */
 @media (max-width: 520px) {
-  dialog { width: calc(100vw - 16px); max-width: none; max-height: calc(100dvh - 16px); border-radius: 14px; overflow: auto; }
-  dialog form { padding: 10px 12px 12px; }
+  /* Fixed sheet: fills the screen height, never scrolls. */
+  dialog {
+    width: calc(100vw - 16px); max-width: none;
+    height: calc(100dvh - 24px); max-height: calc(100dvh - 24px);
+    border-radius: 14px; overflow: hidden; overscroll-behavior: contain;
+  }
+  dialog form { height: 100%; display: flex; flex-direction: column; padding: 14px 14px 14px; }
+  dialog h3 { margin-top: auto !important; }
+  dialog .dialog-head + h3 { margin-top: 14px !important; }
+  .dialog-foot { margin-top: auto !important; padding-top: 12px; }
   .dialog-head { gap: 6px; }
   .dialog-head h2 { font-size: 0.95rem; }
   .close-btn { padding: 1px 8px; font-size: 0.8rem; }

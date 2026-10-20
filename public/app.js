@@ -121,8 +121,10 @@ function applyTheme() {
 
 $("open-settings").addEventListener("click", () => {
   fillSettingsForm();
+  document.documentElement.classList.add("modal-open"); // lock the page behind the modal
   $("settings").showModal();
 });
+$("settings").addEventListener("close", () => document.documentElement.classList.remove("modal-open"));
 $("settings").addEventListener("click", (e) => {
   if (e.target === $("settings")) $("settings").close(); // click on backdrop
 });
