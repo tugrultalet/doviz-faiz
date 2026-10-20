@@ -2,7 +2,9 @@
 <html lang="tr">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>Döviz mi Faiz mi</title>
   <script>
     // Apply the saved theme before first paint.
@@ -10,6 +12,15 @@
       const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
     } catch {}
+    // iOS Safari ignores user-scalable=no; block pinch and double-tap zoom so the page behaves like an app.
+    document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+    document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    let lastTouchEnd = 0;
+    document.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 300 && !e.target.closest("input, select, button, summary, label")) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive: false });
   </script>
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>

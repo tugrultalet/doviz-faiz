@@ -59,6 +59,9 @@
 }
 
 * { box-sizing: border-box; }
+/* App-like on mobile: vertical scroll only, no pinch or double-tap zoom. */
+html, body { touch-action: pan-y; overscroll-behavior-x: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, summary, label, select, input { touch-action: manipulation; }
 body {
   margin: 0;
   background: var(--surface-0);
@@ -196,6 +199,8 @@ dialog h3 { margin: 18px 0 8px; }
 
 @media (max-width: 640px) {
   .rate-row { grid-template-columns: 1fr; }
+  /* iOS zooms into fields with text under 16px on focus. */
+  input[type="number"], input[type="text"], select { font-size: max(16px, 1em); }
 }
 @media (max-width: 520px) {
   .main-row { grid-template-columns: 1fr 72px; gap: 8px; align-items: end; }
