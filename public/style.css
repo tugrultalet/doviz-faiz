@@ -11,6 +11,7 @@
   --accent: #2a78d6;
   --series-usd: #2a78d6;
   --series-eur: #eb6834;
+  --series-parity: #1baf7a;
   --good: #0a7a3d;
   --good-bg: #e3f4ea;
   --bad: #b3261e;
@@ -31,6 +32,7 @@
     --accent: #3987e5;
     --series-usd: #3987e5;
     --series-eur: #d95926;
+    --series-parity: #199e70;
     --good: #6fd39a;
     --good-bg: #173524;
     --bad: #f2948d;
@@ -51,6 +53,7 @@
   --accent: #3987e5;
   --series-usd: #3987e5;
   --series-eur: #d95926;
+  --series-parity: #199e70;
   --good: #6fd39a;
   --good-bg: #173524;
   --bad: #f2948d;

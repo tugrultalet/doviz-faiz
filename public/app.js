@@ -352,64 +352,71 @@ function renderCards() {
     .join("");
 }
 
+/** USD/TRY, EUR/TRY and EUR/USD as % change: one line chart over the year, one over 30-day periods. */
 function renderCharts(fx) {
   for (const id of ["rate-chart", "month-chart"]) Chart.getChart($(id))?.destroy();
   const text = cssVar("--text-secondary");
   const grid = cssVar("--grid");
   const scales = {
     x: { ticks: { color: text, maxTicksLimit: 8 }, grid: { display: false } },
-    y: { ticks: { color: text }, grid: { color: grid } },
+    y: {
+      ticks: { color: text, callback: (v) => `%${v}` },
+      grid: { color: (ctx) => (ctx.tick.value === 0 ? cssVar("--text-muted") : grid) },
+    },
   };
   const legend = { labels: { color: text, usePointStyle: true, pointStyle: "rectRounded" } };
+  const parity = paritySeries(fx.eur, fx.usd);
+  const series = [
+    { label: "USD/TRY", color: "--series-usd", points: fx.usd },
+    { label: "EUR/TRY", color: "--series-eur", points: alignTo(fx.usd, fx.eur).map((value, i) => ({ date: fx.usd[i].date, value })) },
+    { label: "EUR/USD", color: "--series-parity", points: alignTo(fx.usd, parity).map((value, i) => ({ date: fx.usd[i].date, value })) },
+  ];
+  const line = (s, data, extra) => ({
+    label: s.label,
+    data,
+    borderColor: cssVar(s.color),
+    backgroundColor: cssVar(s.color),
+    borderWidth: 2,
+    tension: 0.15,
+    ...extra,
+  });
+  const pctTooltip = (title) => ({
+    callbacks: { ...(title && { title }), label: (c) => `${c.dataset.label}: ${fmtPct(c.parsed.y / 100)}` },
+  });
 
+  // 1) Change since the first day of the year window.
   new Chart($("rate-chart"), {
     type: "line",
     data: {
       labels: fx.usd.map((p) => fmtDate(p.date)),
-      datasets: [
-        { label: "USD/TRY", data: fx.usd.map((p) => p.value), borderColor: cssVar("--series-usd"), backgroundColor: cssVar("--series-usd") },
-        { label: "EUR/TRY", data: alignTo(fx.usd, fx.eur), borderColor: cssVar("--series-eur"), backgroundColor: cssVar("--series-eur") },
-      ].map((d) => ({ ...d, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 })),
+      datasets: series.map((s) => {
+        const first = s.points.find((p) => p.value != null)?.value;
+        return line(s, s.points.map((p) => (p.value == null ? null : (p.value / first - 1) * 100)), { pointRadius: 0, pointHoverRadius: 4 });
+      }),
     },
-    options: {
-      maintainAspectRatio: false,
-      interaction: { mode: "index", intersect: false },
-      plugins: { legend, tooltip: { callbacks: { label: (c) => `${c.dataset.label}: ${fmtRate(c.parsed.y)}` } } },
-      scales,
-    },
+    options: { maintainAspectRatio: false, interaction: { mode: "index", intersect: false }, plugins: { legend, tooltip: pctTooltip() }, scales },
   });
 
+  // 2) Change in each 30-day period (rightmost = last 30 days).
+  const monthly = { "USD/TRY": stats.USD.months, "EUR/TRY": stats.EUR.months, "EUR/USD": trendStats(parity).months };
   const months = [...stats.USD.months].reverse();
   new Chart($("month-chart"), {
-    type: "bar",
+    type: "line",
     data: {
       labels: months.map((m) => fmtDate(m.end).slice(0, 5)),
-      datasets: ["USD", "EUR"].map((code) => ({
-        label: code,
-        data: [...stats[code].months].reverse().map((m) => m.change * 100),
-        backgroundColor: cssVar(CURRENCIES[code].color),
-        borderRadius: 4,
-        borderSkipped: "start",
-        borderColor: cssVar("--surface-1"),
-        borderWidth: { left: 1, right: 1 },
-      })),
+      datasets: series.map((s) => line(s, [...monthly[s.label]].reverse().map((m) => m.change * 100), { pointRadius: 3, pointHoverRadius: 5, tension: 0 })),
     },
     options: {
       maintainAspectRatio: false,
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend,
-        tooltip: {
-          callbacks: {
-            title: (items) => {
-              const m = months[items[0].dataIndex];
-              return `${fmtDate(m.start)} – ${fmtDate(m.end)}`;
-            },
-            label: (c) => `${c.dataset.label}: ${fmtPct(c.parsed.y / 100)}`,
-          },
-        },
+        tooltip: pctTooltip((items) => {
+          const m = months[items[0].dataIndex];
+          return `${fmtDate(m.start)} – ${fmtDate(m.end)}`;
+        }),
       },
-      scales: { ...scales, y: { ...scales.y, ticks: { color: text, callback: (v) => `%${v}` } } },
+      scales,
     },
   });
 }
