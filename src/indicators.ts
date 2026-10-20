@@ -24,7 +24,7 @@ export const INDICATORS: Record<IndicatorId, Def> = {
   hhInflationExp: { label: "Hanehalkı 12 ay sonrası enflasyon beklentisi (%)", code: env("hhInflationExp", "TP.ENFBEK.HBA12ENF"), rangeDays: 400 },
   reer: { label: "TÜFE bazlı reel efektif döviz kuru (2003=100)", code: env("reer", "TP.RK.T1.Y"), rangeDays: 3650 },
   reserves: { label: "TCMB toplam rezervleri (milyon USD)", code: env("reserves", "TP.AB.TOPLAM"), rangeDays: 400 },
-  fxDeposits: { label: "Yurt içi yerleşiklerin döviz mevduatı", code: env("fxDeposits", ""), rangeDays: 400 },
+  fxDeposits: { label: "Yurt içi yerleşik özel sektörün döviz tevdiat hesabı", code: env("fxDeposits", "TP.KM.E049"), rangeDays: 400 },
   bondYield: { label: "Devlet tahvili / bono faizi (%)", code: env("bondYield", ""), rangeDays: 120 },
 };
 

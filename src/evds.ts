@@ -60,7 +60,7 @@ export async function discoverSeries(key: string, queries: [string, string][], l
         const series = (await evdsMeta(`serieList/type=json&code=${g.DATAGROUP_CODE}`, key)).filter((s) =>
           lower(s.SERIE_NAME).includes(lower(seriesWord)),
         );
-        for (const s of series.slice(0, 8)) log(`[evds-discover]     ${s.SERIE_CODE} | ${s.SERIE_NAME}`);
+        for (const s of series.slice(0, seriesWord ? 8 : 40)) log(`[evds-discover]     ${s.SERIE_CODE} | ${s.SERIE_NAME}`);
       } catch (err) {
         log(`[evds-discover]     series list failed: ${(err as Error).message}`);
       }

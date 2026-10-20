@@ -30,21 +30,22 @@ describe("/api/fx", () => {
       expect((init?.headers as Record<string, string>).key).toBe("secret");
       return json({
         items: [
-          { Tarih: "17-10-2026", TP_DK_USD_A_YTL: "42.0", TP_DK_EUR_A_YTL: "49.0" },
-          { Tarih: "18-10-2026", TP_DK_USD_A_YTL: null, TP_DK_EUR_A_YTL: null },
-          { Tarih: "20-10-2026", TP_DK_USD_A_YTL: "42.2", TP_DK_EUR_A_YTL: "49.3" },
+          { Tarih: "17-10-2026", TP_DK_USD_A_YTL: "42.0", TP_DK_USD_S_YTL: "42.2", TP_DK_EUR_A_YTL: "49.0", TP_DK_EUR_S_YTL: "49.2" },
+          { Tarih: "18-10-2026", TP_DK_USD_A_YTL: null, TP_DK_USD_S_YTL: null, TP_DK_EUR_A_YTL: null, TP_DK_EUR_S_YTL: null },
+          { Tarih: "20-10-2026", TP_DK_USD_A_YTL: "42.2", TP_DK_USD_S_YTL: "42.4", TP_DK_EUR_A_YTL: "49.3", TP_DK_EUR_S_YTL: "49.5" },
         ],
       });
     });
     vi.stubGlobal("fetch", fetchMock);
 
     const body = await (await createApp("secret").request("/api/fx")).json();
-    expect(fetchMock.mock.calls[0][0]).toContain("evds3.tcmb.gov.tr/igmevdsms-dis/series=TP.DK.USD.A.YTL-TP.DK.EUR.A.YTL");
+    expect(fetchMock.mock.calls[0][0]).toContain("evds3.tcmb.gov.tr/igmevdsms-dis/series=TP.DK.USD.A.YTL-TP.DK.USD.S.YTL-TP.DK.EUR.A.YTL-TP.DK.EUR.S.YTL");
     expect(body.source).toMatch(/EVDS/);
     expect(body.usd).toEqual([
-      { date: "2026-10-17", value: 42 },
-      { date: "2026-10-20", value: 42.2 },
+      { date: "2026-10-17", value: 42.1 },
+      { date: "2026-10-20", value: 42.3 },
     ]);
+    expect(body.spread.USD).toBeCloseTo((0.2 / 42.3) * 100, 6);
   });
 
   it("returns 502 with a Turkish message when all sources fail", async () => {

@@ -2,7 +2,7 @@ import { serve } from "@hono/node-server";
 import { createApp } from "./app.js";
 import { discoverSeries } from "./evds.js";
 import { fetchIndicators } from "./indicators.js";
-import { fetchDepositRates } from "./sources.js";
+import { fetchDepositRates, fetchFx } from "./sources.js";
 
 const port = Number(process.env.PORT ?? 8787);
 serve({ fetch: createApp().fetch, port }, () => console.log(`http://localhost:${port}`));
@@ -11,6 +11,8 @@ serve({ fetch: createApp().fetch, port }, () => console.log(`http://localhost:${
 const key = process.env.EVDS_API_KEY;
 if (key) {
   void (async () => {
+    const fx = await fetchFx(key).catch((err: Error) => ({ source: err.message, usd: [], eur: [], spread: null }));
+    console.log(`[evds-check] fx ${fx.source}: usd ${fx.usd.length} pts, last ${JSON.stringify(fx.usd.at(-1))}, spread ${JSON.stringify(fx.spread)}`);
     const deposit = await fetchDepositRates(key).catch((err: Error) => err.message);
     console.log("[evds-check] deposit", JSON.stringify(deposit));
     for (const [id, r] of Object.entries(await fetchIndicators(key))) {
@@ -19,12 +21,9 @@ if (key) {
     }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Anket", "Döviz"],
-        ["Anket", "Kur"],
-        ["Beklenti", "Döviz Kuru"],
-        ["Mevduat", "Yabancı Para"],
-        ["Mevduat", "YP"],
-        ["Döviz", "Mevduat"],
+        ["Mevduat Faiz Oranları (Akım)", ""],
+        ["Beklenti Anketi", ""],
+        ["Döviz Kurları", "Satış"],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();
