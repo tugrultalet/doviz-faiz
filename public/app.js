@@ -356,7 +356,7 @@ function renderCards() {
         <dl class="stats">
           <dt>Son 1 yıl</dt><dd>${fmtPct(s.yearChange)}</dd>
           <dt>Son 30 gün</dt><dd>${fmtPct(s.lastMonth)}</dd>
-          <dt>Önceki 11 dönem, 30 günlük ortalama</dt><dd>${fmtPct(s.prevAvg)}</dd>
+          <dt title="Önceki 11 adet 30 günlük dönemin ortalaması">Önceki 11 ay ort.</dt><dd>${fmtPct(s.prevAvg)}</dd>
         </dl>
       </article>`;
     })

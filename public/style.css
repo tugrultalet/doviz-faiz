@@ -280,3 +280,19 @@ main > section:first-of-type h2 { margin-top: 8px; }
 @media (max-width: 520px) {
   .tiles { grid-template-columns: 1fr 1fr; }
 }
+
+/* Compact trend cards */
+#trend-cards { gap: 8px; }
+#trend-cards .card { padding: 10px 12px; border-radius: 10px; }
+#trend-cards h3 { font-size: 0.8rem; margin: 0; }
+#trend-cards .badge { font-size: 0.7rem; padding: 1px 8px; }
+#trend-cards .big { font-size: 1.3rem; line-height: 1.25; margin-top: 2px; }
+#trend-cards .stats { font-size: 0.78rem; margin-top: 4px; gap: 0 8px; }
+@media (max-width: 520px) {
+  #trend-cards { grid-template-columns: 1fr 1fr; }
+  #trend-cards .card { padding: 8px 10px; }
+  #trend-cards h3 { font-size: 0.72rem; }
+  #trend-cards .card-head { flex-wrap: wrap; row-gap: 2px; }
+  #trend-cards .big { font-size: 1.15rem; }
+  #trend-cards .stats { font-size: 0.7rem; }
+}
