@@ -27,7 +27,16 @@ if (key) {
     );
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Altın Fiyatları", ""],
+        ["Kartlı Ödeme", ""],
+        ["Kredi Kart", ""],
+        ["Güven Endeksi", ""],
+        ["Sanayi Üretim", "Toplam"],
+        ["Kapasite Kullanım", ""],
+        ["Temel İşgücü Göstergeleri", "İşsizlik"],
+        ["Konut Fiyat", ""],
+        ["Ödemeler Dengesi", "Cari"],
+        ["Mevduat (Türlerine Göre)", ""],
+        ["Krediler - Mevduat Bankaları", "Toplam"],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();
