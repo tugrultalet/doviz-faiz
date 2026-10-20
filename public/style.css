@@ -174,15 +174,17 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus { outline: 2p
 .chart { position: relative; height: 240px; }
 
 /* Indicators */
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-/* Title on top (fixed two-line height), value in the middle, note at the bottom: values line up across tiles. */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+/* Title on top (fixed two-line height), value below it, note at the bottom: values line up across tiles. */
+.tiles { gap: 8px; }
 .tile {
-  background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
-  display: grid; grid-template-rows: 2.5em auto 1fr; row-gap: 8px; min-height: 150px;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
+  display: grid; grid-template-rows: 2.4em auto 1fr; row-gap: 4px; min-height: 0;
 }
-.tile h3 { font-size: 0.8rem; line-height: 1.25; margin: 0; align-self: start; }
-.tile .value { font-size: 1.35rem; font-weight: 650; font-variant-numeric: tabular-nums; align-self: start; }
-.tile p { margin: 0; font-size: 0.72rem; font-weight: 300; line-height: 1.35; color: var(--text-muted); align-self: end; }
+.tile h3 { font-size: 0.72rem; line-height: 1.2; margin: 0; align-self: start; }
+.tile .value { font-size: 1.1rem; font-weight: 650; line-height: 1.2; font-variant-numeric: tabular-nums; align-self: start; }
+.tile .value .small { font-size: 0.75rem; }
+.tile p { margin: 0; font-size: 0.66rem; font-weight: 300; line-height: 1.3; color: var(--text-muted); align-self: end; }
 
 footer { margin-top: 32px; }
 
@@ -274,4 +276,7 @@ html.modal-open, html.modal-open body { overflow: hidden; touch-action: none; ov
 main > section:first-of-type h2 { margin-top: 8px; }
 @media (max-width: 520px) {
   .calc { padding: 10px; margin-left: -6px; margin-right: -6px; border-radius: 14px; }
+}
+@media (max-width: 520px) {
+  .tiles { grid-template-columns: 1fr 1fr; }
 }
