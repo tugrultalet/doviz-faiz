@@ -93,11 +93,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .big-field input, .big-field select { font-size: 1.5rem; font-weight: 650; padding: 10px 14px; border-radius: 10px; }
 .big-field select { font-size: 1.1rem; }
 .inputs label, .settings-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 0.88rem; color: var(--text-secondary); }
-input[type="number"], select {
+input[type="number"], input[type="text"], select {
   font: inherit; color: var(--text-primary); background: var(--surface-1);
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; min-width: 0; width: 100%;
 }
-input[type="number"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input[type="number"]:focus, input[type="text"]:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .row { display: flex; gap: 8px; }
 .row select { width: auto; flex: none; min-width: 76px; }
 .hint { font-size: 0.78rem; color: var(--text-muted); }

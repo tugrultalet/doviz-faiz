@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatAmountInput,
+  parseAmount,
   equivalents,
   roundTrip,
   terms,
@@ -312,5 +314,23 @@ describe("equivalents", () => {
     expect(eq.TRY).toBeCloseTo(t.final, 6); // back in the input currency = the trip's result
     expect(eq.TRY).toBeCloseTo(t.atMaturity * 50.4 * (1 - 0.001), 6);
     expect(eq.EUR).toBeCloseTo((t.atMaturity * 50.4 * 0.999) / 1.002 / (58.1 * 1.001), 6);
+  });
+});
+
+describe("amount input", () => {
+  it("groups thousands with dots and keeps decimals after a comma", () => {
+    expect(formatAmountInput("1000000")).toBe("1.000.000");
+    expect(formatAmountInput("1.0000")).toBe("10.000");
+    expect(formatAmountInput("250000,5")).toBe("250.000,5");
+    expect(formatAmountInput("1234,567")).toBe("1.234,56");
+    expect(formatAmountInput("1234,")).toBe("1.234,");
+    expect(formatAmountInput("00120")).toBe("120");
+    expect(formatAmountInput("abc")).toBe("");
+  });
+
+  it("parses Turkish-formatted amounts", () => {
+    expect(parseAmount("1.000.000")).toBe(1_000_000);
+    expect(parseAmount("250.000,50")).toBe(250_000.5);
+    expect(parseAmount("")).toBe(0);
   });
 });

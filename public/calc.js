@@ -220,3 +220,18 @@ export function percentileOf(series, value) {
 export function equivalents(amount, held, end, spreadPct, fxBuyTaxPct = 0) {
   return Object.fromEntries(["TRY", "USD", "EUR"].map((c) => [c, convert(amount, held, c, end, spreadPct, fxBuyTaxPct)]));
 }
+
+/** Reads a Turkish-formatted amount: "1.250.000,50" -> 1250000.5. Dots are thousands separators. */
+export function parseAmount(text) {
+  const n = Number(String(text).replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** Formats what the user typed with thousands dots, keeping a trailing comma and up to 2 decimals. */
+export function formatAmountInput(text) {
+  const clean = String(text).replace(/[^\d,]/g, "");
+  const [intPart, ...rest] = clean.split(",");
+  const digits = intPart.replace(/^0+(?=\d)/, "");
+  const grouped = digits.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return rest.length ? `${grouped || "0"},${rest.join("").slice(0, 2)}` : grouped;
+}

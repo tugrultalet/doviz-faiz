@@ -6,6 +6,8 @@ import {
   percentileOf,
   projectRate,
   equivalents,
+  formatAmountInput,
+  parseAmount,
   rateDirection,
   tlStopajForDays,
   trendStats,
@@ -418,7 +420,7 @@ function readInput() {
   const num = (id) => Number($(id).value) || 0;
   const bondRate = setting("bondRate");
   return {
-    amount: num("amount"),
+    amount: parseAmount($("amount").value),
     currency: $("currency").value,
     days: Math.max(1, num("days")),
     tlRate: num("tlRate"),
@@ -574,8 +576,19 @@ $("result").addEventListener("click", (e) => {
   render();
 });
 
+/** Re-group the amount with thousands dots while typing, keeping the caret after the same digit. */
+function reformatAmount(input) {
+  const caret = input.selectionStart ?? input.value.length;
+  const digitsBefore = input.value.slice(0, caret).replace(/[^\d,]/g, "").length;
+  input.value = formatAmountInput(input.value);
+  let pos = 0;
+  for (let seen = 0; pos < input.value.length && seen < digitsBefore; pos++) if (/[\d,]/.test(input.value[pos])) seen++;
+  input.setSelectionRange(pos, pos);
+}
+
 $("form").addEventListener("input", (e) => {
   touched.add(e.target.id);
+  if (e.target.id === "amount") reformatAmount(e.target);
   if (e.target.id === "days") applyDefaults();
   render();
 });
