@@ -37,40 +37,6 @@
 
     <p class="error" id="error" hidden></p>
 
-    <form id="form" class="card inputs" autocomplete="off">
-      <div class="main-row">
-        <label class="big-field">Tutar
-          <span class="row">
-            <input id="amount" type="text" value="1.000.000" inputmode="decimal" autocomplete="off" />
-            <select id="currency" aria-label="Para birimi">
-              <option value="TRY">TL</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-            </select>
-          </span>
-        </label>
-        <label class="big-field">Vade (gün)
-          <input id="days" type="number" min="1" max="365" value="32" inputmode="numeric" />
-        </label>
-      </div>
-      <div class="rate-row">
-        <label>TL mevduat faizi (%)
-          <input id="tlRate" type="number" step="0.01" min="0" inputmode="decimal" />
-          <span class="hint" id="tlRateHint"></span>
-        </label>
-        <label>Dolar mevduat faizi (%)
-          <input id="usdRate" type="number" step="0.01" min="0" inputmode="decimal" />
-          <span class="hint" id="usdRateHint"></span>
-        </label>
-        <label>Euro mevduat faizi (%)
-          <input id="eurRate" type="number" step="0.01" min="0" inputmode="decimal" />
-          <span class="hint" id="eurRateHint"></span>
-        </label>
-      </div>
-    </form>
-
-    <section id="result" aria-live="polite"></section>
-
     <section>
       <h2>Kur trendi</h2>
       <div class="cards" id="trend-cards"></div>
@@ -87,6 +53,43 @@
     <section>
       <h2>Piyasa göstergeleri</h2>
       <div class="tiles" id="indicator-tiles"></div>
+    </section>
+
+    <section class="calc" aria-labelledby="calc-title">
+      <h2 id="calc-title">Hesaplama: TL faiz mi, dolar mı, euro mu?</h2>
+      <form id="form" class="card inputs" autocomplete="off">
+        <div class="main-row">
+          <label class="big-field">Tutar
+            <span class="row">
+              <input id="amount" type="text" value="1.000.000" inputmode="decimal" autocomplete="off" />
+              <select id="currency" aria-label="Para birimi">
+                <option value="TRY">TL</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </span>
+          </label>
+          <label class="big-field">Vade (gün)
+            <input id="days" type="number" min="1" max="365" value="32" inputmode="numeric" />
+          </label>
+        </div>
+        <div class="rate-row">
+          <label>TL mevduat faizi (%)
+            <input id="tlRate" type="number" step="0.01" min="0" inputmode="decimal" />
+            <span class="hint" id="tlRateHint"></span>
+          </label>
+          <label>Dolar mevduat faizi (%)
+            <input id="usdRate" type="number" step="0.01" min="0" inputmode="decimal" />
+            <span class="hint" id="usdRateHint"></span>
+          </label>
+          <label>Euro mevduat faizi (%)
+            <input id="eurRate" type="number" step="0.01" min="0" inputmode="decimal" />
+            <span class="hint" id="eurRateHint"></span>
+          </label>
+        </div>
+      </form>
+
+      <div id="result" aria-live="polite"></div>
     </section>
 
     <footer class="muted small">

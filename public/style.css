@@ -17,6 +17,8 @@
   --bad: #b3261e;
   --bad-bg: #fbe7e5;
   --neutral-bg: #ecebe6;
+  --calc-bg: #e8f0fb;
+  --calc-border: #b9cfee;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -38,6 +40,8 @@
     --bad: #f2948d;
     --bad-bg: #3d1a17;
     --neutral-bg: #2a2a27;
+    --calc-bg: #15202e;
+    --calc-border: #2a3d57;
   }
 }
 :root[data-theme="dark"] {
@@ -59,6 +63,8 @@
   --bad: #f2948d;
   --bad-bg: #3d1a17;
   --neutral-bg: #2a2a27;
+  --calc-bg: #15202e;
+  --calc-border: #2a3d57;
 }
 
 * { box-sizing: border-box; }
@@ -256,4 +262,16 @@ html.modal-open, html.modal-open body { overflow: hidden; touch-action: none; ov
   .dialog-foot { margin-top: 10px; }
   .link-btn { font-size: 0.75rem; }
   .primary-btn { padding: 5px 16px; font-size: 0.85rem; }
+}
+
+/* Calculator block: its own tinted panel at the bottom of the page. */
+.calc {
+  margin-top: 32px; padding: 16px; border-radius: 18px;
+  background: var(--calc-bg); border: 1px solid var(--calc-border);
+}
+.calc h2 { margin: 0 0 12px; }
+.calc .card { box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+main > section:first-of-type h2 { margin-top: 8px; }
+@media (max-width: 520px) {
+  .calc { padding: 10px; margin-left: -6px; margin-right: -6px; border-radius: 14px; }
 }
