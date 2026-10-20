@@ -1,5 +1,5 @@
 import { monthsBetween, periodReturn } from "./calc.js";
-import { applyTheme, loadSettings, saveSettings, setupModal } from "./ui.js";
+import { applyTheme, loadSettings, saveSettings, setupModal, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const nf = (digits) => new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -132,6 +132,7 @@ $("gold-range").addEventListener("click", (e) => {
 
 // Settings: only the theme lives here; it is shared with the main page.
 const settings = loadSettings();
+setupSidebar("gold");
 setupModal($("open-settings"), $("settings"), () => {
   for (const r of document.querySelectorAll('input[name="theme"]')) r.checked = r.value === (settings.theme ?? "system");
 });

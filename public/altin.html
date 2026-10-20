@@ -10,6 +10,7 @@
     try {
       const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      if (localStorage.getItem("doviz-faiz-sidebar-collapsed") === "1") document.documentElement.classList.add("sb-collapsed");
     } catch {}
     document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
     document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });

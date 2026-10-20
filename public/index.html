@@ -11,6 +11,7 @@
     try {
       const t = JSON.parse(localStorage.getItem("doviz-faiz-settings") || "{}").theme;
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      if (localStorage.getItem("doviz-faiz-sidebar-collapsed") === "1") document.documentElement.classList.add("sb-collapsed");
     } catch {}
     // iOS Safari ignores user-scalable=no; block pinch and double-tap zoom so the page behaves like an app.
     document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
