@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: doviz-faiz
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: EVDS_API_KEY
+        sync: false
