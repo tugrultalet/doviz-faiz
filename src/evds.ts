@@ -44,21 +44,23 @@ async function evdsMeta(path: string, key: string): Promise<Record<string, unkno
 }
 
 /**
- * Logs EVDS series whose data group name matches one of the keywords.
- * Used once to find series codes: enable with EVDS_DISCOVER=1 and read the server log.
+ * Logs EVDS series to help find codes: for each [group keyword, series keyword] pair, lists the series
+ * in non-archive data groups whose names match both. Enable with EVDS_DISCOVER=1 and read the server log.
  */
-export async function discoverSeries(key: string, keywords: string[], log = console.log) {
+export async function discoverSeries(key: string, queries: [string, string][], log = console.log) {
   const lower = (s: unknown) => String(s ?? "").toLocaleLowerCase("tr-TR");
-  const groups = await evdsMeta("datagroups/mode=0&type=json", key);
-  log(`[evds-discover] ${groups.length} data groups`);
-  for (const keyword of keywords) {
-    const hits = groups.filter((g) => lower(g.DATAGROUP_NAME).includes(lower(keyword))).slice(0, 6);
-    log(`[evds-discover] "${keyword}": ${hits.length} group(s)`);
+  const groups = (await evdsMeta("datagroups/mode=0&type=json", key)).filter((g) => !lower(g.DATAGROUP_NAME).includes("arşiv"));
+  log(`[evds-discover] ${groups.length} active data groups`);
+  for (const [groupWord, seriesWord] of queries) {
+    const hits = groups.filter((g) => lower(g.DATAGROUP_NAME).includes(lower(groupWord))).slice(0, 8);
+    log(`[evds-discover] "${groupWord}" / "${seriesWord}": ${hits.length} group(s)`);
     for (const g of hits) {
       log(`[evds-discover]   group ${g.DATAGROUP_CODE} | ${g.DATAGROUP_NAME} | freq ${g.FREQUENCY_STR ?? g.FREQUENCY ?? "?"}`);
       try {
-        const series = await evdsMeta(`serieList/type=json&code=${g.DATAGROUP_CODE}`, key);
-        for (const s of series.slice(0, 25)) log(`[evds-discover]     ${s.SERIE_CODE} | ${s.SERIE_NAME}`);
+        const series = (await evdsMeta(`serieList/type=json&code=${g.DATAGROUP_CODE}`, key)).filter((s) =>
+          lower(s.SERIE_NAME).includes(lower(seriesWord)),
+        );
+        for (const s of series.slice(0, 8)) log(`[evds-discover]     ${s.SERIE_CODE} | ${s.SERIE_NAME}`);
       } catch (err) {
         log(`[evds-discover]     series list failed: ${(err as Error).message}`);
       }

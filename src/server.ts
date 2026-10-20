@@ -19,16 +19,17 @@ if (key) {
     }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        "Piyasa Katılımcıları",
-        "Hanehalkı",
-        "Rezerv",
-        "Döviz Tevdiat",
-        "Yabancı Para Mevduat",
-        "Reel Efektif",
-        "Fonlama",
-        "Mevduat Faiz",
-        "Gösterge",
-        "Devlet İç Borçlanma",
+        ["Tüketici Fiyat", "Genel"],
+        ["Piyasa Katılımcıları", "ABD Doları"],
+        ["Piyasa Katılımcıları", "12 Ay Sonra"],
+        ["Hanehalkı", "Enflasyon"],
+        ["Sektörel Enflasyon", "Hanehalkı"],
+        ["Rezerv", "Brüt"],
+        ["Rezerv", "Toplam"],
+        ["Yurt İçi Yerleşik", "Döviz"],
+        ["Döviz Tevdiat", "Toplam"],
+        ["Gösterge", "Faiz"],
+        ["Devlet İç Borçlanma", "Faiz"],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();
