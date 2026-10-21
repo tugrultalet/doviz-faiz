@@ -460,6 +460,6 @@ section[id] { scroll-margin-top: 12px; }
 /* Home-screen app (no Safari toolbar): tab bar at the very bottom, over the home-indicator area.
    The .standalone class is set in the page head; the Safari browser layout is unchanged. */
 @media (max-width: 1023px) {
-  .standalone .tabbar { bottom: max(4px, calc(env(safe-area-inset-bottom) - 30px)); }
-  .standalone body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+  .standalone .tabbar { bottom: 20px; }
+  .standalone body { padding-bottom: 100px; }
 }
