@@ -116,6 +116,7 @@ export function setupSidebar(active) {
       <p class="sb-note">Kaynak: TCMB EVDS</p>
     </div>`;
   document.body.prepend(aside);
+  setupPullToRefresh();
 
   // Phones and tablets: floating "liquid glass" tab bar at the bottom instead of the sidebar.
   const tabbar = document.createElement("nav");
@@ -130,5 +131,68 @@ export function setupSidebar(active) {
   aside.querySelector("[data-sb-collapse]").addEventListener("click", () => {
     writeFlag(SIDEBAR_KEY, document.documentElement.classList.toggle("sb-collapsed"));
     window.dispatchEvent(new Event("resize")); // let charts fit the new width
+  });
+}
+
+// ---- Pull to refresh (phones) ----
+// Works the same in Safari, Chrome and home-screen apps, where the browser's own gesture may be missing.
+
+const PTR_TRIGGER = 72; // px of pull needed to reload
+
+export function setupPullToRefresh() {
+  if (!matchMedia("(pointer: coarse)").matches) return;
+  const el = document.createElement("div");
+  el.className = "ptr";
+  el.setAttribute("aria-hidden", "true");
+  el.innerHTML = icon('<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>');
+  document.body.append(el);
+
+  let startY = null;
+  let pull = 0;
+  const busy = () => document.documentElement.classList.contains("modal-open") || document.querySelector("dialog[open]");
+  const show = (px) => {
+    const p = Math.min(px / PTR_TRIGGER, 1);
+    el.style.transform = `translate(-50%, ${Math.min(px, PTR_TRIGGER * 1.4) - 48}px) rotate(${p * 270}deg)`;
+    el.style.opacity = String(Math.min(p * 1.2, 1));
+    el.classList.toggle("ready", px >= PTR_TRIGGER);
+  };
+  const reset = () => {
+    startY = null;
+    pull = 0;
+    el.classList.add("settle");
+    el.style.transform = "";
+    el.style.opacity = "0";
+    el.classList.remove("ready");
+  };
+
+  document.addEventListener(
+    "touchstart",
+    (e) => {
+      if (window.scrollY > 0 || e.touches.length > 1 || busy()) return;
+      startY = e.touches[0].clientY;
+      el.classList.remove("settle");
+    },
+    { passive: true },
+  );
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      if (startY == null) return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy <= 0 || window.scrollY > 0) {
+        if (pull) reset();
+        return;
+      }
+      pull = dy * 0.55; // resistance, like a native pull
+      show(pull);
+    },
+    { passive: true },
+  );
+  document.addEventListener("touchend", () => {
+    if (startY == null) return;
+    if (pull >= PTR_TRIGGER) {
+      el.classList.add("spin");
+      location.reload();
+    } else reset();
   });
 }

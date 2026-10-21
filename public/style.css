@@ -72,7 +72,7 @@
 
 * { box-sizing: border-box; }
 /* App-like on mobile: vertical scroll only, no pinch or double-tap zoom. */
-html, body { touch-action: pan-y; overscroll-behavior-x: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { touch-action: pan-y; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 button, summary, label, select, input { touch-action: manipulation; }
 body {
   margin: 0;
@@ -439,3 +439,20 @@ main > section:first-of-type h2 { margin-top: 8px; }
 .stat-chart { height: 210px; }
 section[id] { scroll-margin-top: 12px; }
 @media (max-width: 520px) { .stat-grid { grid-template-columns: 1fr; } .stat-chart { height: 190px; } }
+
+/* Pull-to-refresh indicator: a small glass circle that slides down from the top. */
+.ptr {
+  position: fixed; z-index: 60; top: calc(env(safe-area-inset-top) + 8px); left: 50%;
+  width: 40px; height: 40px; display: grid; place-items: center; border-radius: 999px;
+  transform: translate(-50%, -48px); opacity: 0; pointer-events: none;
+  color: var(--text-secondary); background: rgb(255 255 255 / 0.6); border: 1px solid rgb(255 255 255 / 0.7);
+  -webkit-backdrop-filter: blur(12px) saturate(180%); backdrop-filter: blur(12px) saturate(180%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.15), inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+.ptr .sb-ico { width: 20px; height: 20px; }
+.ptr.ready { color: var(--accent); }
+.ptr.settle { transition: transform 0.25s ease, opacity 0.25s ease; }
+.ptr.spin .sb-ico { animation: ptr-spin 0.8s linear infinite; }
+@keyframes ptr-spin { to { transform: rotate(360deg); } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ptr { background: rgb(40 40 38 / 0.6); border-color: rgb(255 255 255 / 0.14); box-shadow: 0 6px 18px rgb(0 0 0 / 0.5); } }
+:root[data-theme="dark"] .ptr { background: rgb(40 40 38 / 0.6); border-color: rgb(255 255 255 / 0.14); box-shadow: 0 6px 18px rgb(0 0 0 / 0.5); }
