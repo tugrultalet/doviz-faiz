@@ -1,9 +1,10 @@
 import type { DepositRates, Fx, GoldPoint, Indicators, Market, StatChart } from './types';
 
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://doviz-faiz.onrender.com').replace(/\/$/, '');
+/** Netlify serves the API from a function and its CDN, so it never sleeps (Render's free plan did). */
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://finans-n8x9.netlify.app').replace(/\/$/, '');
 
-/** Long enough for a sleeping free Render instance to wake up (~50 s) and answer. */
-const TIMEOUT_MS = 75_000;
+/** A cold EVDS fetch can take a few seconds; a dead connection should not hang the page. */
+const TIMEOUT_MS = 30_000;
 
 async function getJson<T>(path: string): Promise<T> {
   const controller = new AbortController();

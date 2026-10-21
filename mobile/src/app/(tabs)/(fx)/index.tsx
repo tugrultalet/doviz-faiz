@@ -57,7 +57,7 @@ export default function FxScreen() {
       ) : null}
       {market.error ? <ErrorNote message={market.error} onRetry={() => void loadMarket(true)} /> : null}
       {!data && !market.error ? (
-        <T muted>Veriler yükleniyor… Sunucu uykudaysa ilk açılış bir dakika sürebilir.</T>
+        <T muted>Veriler yükleniyor…</T>
       ) : null}
       {data && trends ? (
         <>

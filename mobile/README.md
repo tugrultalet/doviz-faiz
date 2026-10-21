@@ -48,11 +48,13 @@ Dolar ve euro kuru, son 30 günlük değişim, gram altın (Altın sekmesi bir k
 
 ## API adresi
 
-Varsayılan: `https://doviz-faiz.onrender.com`. Başka bir sunucu için `.env.local` dosyasına yazın:
+Varsayılan: `https://finans-n8x9.netlify.app` (Netlify, uyumaz). Başka bir sunucu için `.env.local` dosyasına yazın:
 
 ```
-EXPO_PUBLIC_API_URL=https://finans-n8x9.netlify.app
+EXPO_PUBLIC_API_URL=https://doviz-faiz.onrender.com
 ```
+
+Adres derleme anında uygulamaya yazılır. Değiştirince yeni build gerekir.
 
 ## Komutlar
 
