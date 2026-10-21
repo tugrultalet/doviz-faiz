@@ -1,5 +1,5 @@
 import { monthsBetween, periodReturn } from "./calc.js";
-import { setupSidebar } from "./ui.js";
+import { revealPage, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const nf = (digits) => new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -132,4 +132,4 @@ $("gold-range").addEventListener("click", (e) => {
 
 setupSidebar("gold");
 
-load();
+load().finally(revealPage);

@@ -15,7 +15,7 @@ import {
   tlStopajForDays,
   trendStats,
 } from "./calc.js";
-import { applyTheme, loadSettings, saveSettings, setupModal, setupSidebar } from "./ui.js";
+import { applyTheme, loadSettings, saveSettings, setupModal, revealPage, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const CURRENCIES = { USD: { label: "Dolar", color: "--series-usd" }, EUR: { label: "Euro", color: "--series-eur" } };
@@ -640,4 +640,4 @@ $("form").addEventListener("input", (e) => {
   render();
 });
 
-load();
+load().finally(revealPage);

@@ -1,4 +1,4 @@
-import { setupSidebar } from "./ui.js";
+import { revealPage, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 const nf = (digits) => new Intl.NumberFormat("tr-TR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
@@ -119,4 +119,4 @@ async function load() {
 setupSidebar("stats");
 // Redraw charts when the theme changes so they pick up the new colours.
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", drawCharts);
-load();
+load().finally(revealPage);

@@ -410,11 +410,10 @@ main > section:first-of-type h2 { margin-top: 8px; }
 }
 /* Page change on phones: the page fades out, the next one fades in. The tab bar stays as it is. */
 @media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
-  main { transition: opacity 250ms ease; }
-  .page-leave main { opacity: 0; }
-  .page-enter main { animation: page-in 350ms ease-out both; }
+  main { transition: opacity 300ms ease; }
+  /* .page-enter stays until the page has drawn its data (revealPage in ui.js), then main fades in. */
+  .page-leave main, .page-enter main { opacity: 0; }
 }
-@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 1023px) and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .tabbar {
     --glass: rgb(40 40 38 / 0.25); --glass-edge: rgb(255 255 255 / 0.14); --glass-shine: rgb(255 255 255 / 0.18);

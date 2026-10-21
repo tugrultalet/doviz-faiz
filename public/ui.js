@@ -203,6 +203,17 @@ export function setupPullToRefresh() {
 const TAB_FROM_KEY = "doviz-faiz-tab-from";
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/**
+ * Fades the page in after a tab change. Pages call it once their data is drawn,
+ * so the fade does not compete with chart drawing and the content does not pop in later.
+ */
+export function revealPage() {
+  const root = document.documentElement;
+  if (!root.classList.contains("page-enter")) return;
+  // Two frames: let the browser paint the new content before the fade starts.
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove("page-enter")));
+}
+
 function setupTabBlob(tabbar) {
   const tabs = [...tabbar.querySelectorAll(".tab")];
   const activeIndex = tabs.findIndex((t) => t.classList.contains("active"));
@@ -238,6 +249,7 @@ function setupTabBlob(tabbar) {
 
   place(activeIndex);
   requestAnimationFrame(() => blob.classList.add("ready"));
+  setTimeout(revealPage, 1500); // slow data: show the page with its loading state
 
   // Arrived from another tab: finish the slide that started on the previous page.
   let from = null;
