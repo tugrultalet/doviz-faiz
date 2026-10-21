@@ -33,6 +33,19 @@ npx eas-cli@latest submit -p ios --latest
 İlk build'de EAS, Apple hesabınızla giriş ister ve sertifikaları kendisi oluşturur.
 Paket kimliği: `com.tugrultalet.finans` (`app.json`).
 
+## Ana ekran widget'ı
+
+`src/widgets/FxWidget.tsx` (expo-widgets). Boyutlar: küçük, orta ve kilit ekranı (dikdörtgen).
+Dolar ve euro kuru, son 30 günlük değişim, gram altın (Altın sekmesi bir kez açıldıysa) ve
+1 yıllık trend senaryosunun önerisini gösterir.
+
+- Widget, verisini uygulamadan alır: uygulama her açıldığında ve veri yenilendiğinde günceller.
+  Uygulama uzun süre açılmazsa widget son veriyi gösterir.
+- Sadece EAS build (TestFlight / App Store) sürümünde çalışır. Expo Go'da widget kodu hiç yüklenmez
+  (`src/widgets/sync.ts`), uygulama normal çalışır.
+- Widget ile uygulama `group.com.tugrultalet.finans` App Group'unu paylaşır. EAS bu yeteneği
+  Apple hesabında kendisi açar.
+
 ## API adresi
 
 Varsayılan: `https://doviz-faiz.onrender.com`. Başka bir sunucu için `.env.local` dosyasına yazın:

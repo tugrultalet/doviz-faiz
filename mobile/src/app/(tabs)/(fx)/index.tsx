@@ -5,9 +5,10 @@ import { FxCharts } from '@/components/fx/FxCharts';
 import { Tiles } from '@/components/fx/Tiles';
 import { TrendCards } from '@/components/fx/TrendCards';
 import { ErrorNote, Screen, SectionTitle, T } from '@/components/ui';
-import { indicatorTiles, readInput, trendsOf } from '@/features/model';
+import { OPTION_LABELS, buildScenarios, indicatorTiles, readInput, trendsOf } from '@/features/model';
 import { useAppStore } from '@/features/store';
-import { fmtDate, fmtTime } from '@/lib/format';
+import { fmtDate, fmtPct, fmtRate, fmtTime, nf } from '@/lib/format';
+import { syncWidget } from '@/widgets/sync';
 
 export default function FxScreen() {
   const market = useAppStore((s) => s.market);
@@ -26,6 +27,25 @@ export default function FxScreen() {
   const trends = useMemo(() => trendsOf(data), [data]);
   const input = useMemo(() => readInput({ amount, currency, days, rates, overrides }, data), [amount, currency, days, rates, overrides, data]);
   const tiles = useMemo(() => indicatorTiles(data, input), [data, input]);
+  const goldLast = useAppStore((s) => [...(s.gold.data ?? [])].reverse().find((p) => p.tlGram != null)?.tlGram ?? null);
+
+  // Home-screen widget: today's rates, the 30-day change and the recommendation of the 1-year trend scenario.
+  useEffect(() => {
+    if (!trends || !market.at) return;
+    const now = { USD: trends.USD.current.value, EUR: trends.EUR.current.value };
+    const best = input.amount > 0 ? buildScenarios(input, now, trends)[0].ranking[0] : null;
+    syncWidget({
+      usd: fmtRate(now.USD),
+      eur: fmtRate(now.EUR),
+      usdMonth: fmtPct(trends.USD.lastMonth, 1),
+      eurMonth: fmtPct(trends.EUR.lastMonth, 1),
+      usdUp: trends.USD.lastMonth >= 0,
+      eurUp: trends.EUR.lastMonth >= 0,
+      gold: goldLast == null ? null : nf(0).format(goldLast),
+      advice: best ? OPTION_LABELS[best] : null,
+      updated: fmtTime(market.at).slice(0, 5) + fmtTime(market.at).slice(10),
+    });
+  }, [trends, input, goldLast, market.at]);
 
   return (
     <Screen refreshing={market.loading && !!data} onRefresh={() => void loadMarket(true)}>

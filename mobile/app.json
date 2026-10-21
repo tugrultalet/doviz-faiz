@@ -34,6 +34,26 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 96
         }
+      ],
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.tugrultalet.finans.widgets",
+          "groupIdentifier": "group.com.tugrultalet.finans",
+          "widgets": [
+            {
+              "name": "FxWidget",
+              "displayName": "Döviz",
+              "description": "Dolar ve euro kuru, son 30 günlük değişim ve öneri.",
+              "supportedFamilies": [
+                "systemSmall",
+                "systemMedium",
+                "accessoryRectangular"
+              ],
+              "contentMarginsDisabled": false
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
