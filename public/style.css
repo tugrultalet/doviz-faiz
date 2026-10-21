@@ -460,6 +460,6 @@ section[id] { scroll-margin-top: 12px; }
 /* Home-screen app (no Safari toolbar): sit the tab bar just above the home indicator, like native iOS apps.
    In the Safari browser this rule does not apply, so the bar keeps its place above Safari's toolbar. */
 @media (max-width: 1023px) and (display-mode: standalone) {
-  .tabbar { bottom: max(8px, calc(env(safe-area-inset-bottom) - 16px)); }
-  body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+  .tabbar { bottom: max(4px, calc(env(safe-area-inset-bottom) - 28px)); }
+  body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
