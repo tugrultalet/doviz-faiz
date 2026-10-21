@@ -1,0 +1,14 @@
+# Netlify: pages from public/ on the CDN, /api/* in a function (netlify/functions/api.mts).
+# Set EVDS_API_KEY in the site's environment variables.
+[build]
+  publish = "public"
+  command = "npm test"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Always revalidate page files so phones do not keep an old CSS/JS after a deploy.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cache-Control = "no-cache"

@@ -35,3 +35,9 @@ Sunucu açılışta her EVDS serisi için bir `[evds-check]` satırı yazar. Yan
 ## Yayın
 
 `render.yaml` ile Render'da ücretsiz web servisi olarak çalışır. `EVDS_API_KEY` değerini Render panelinden girin.
+
+Render'ın ücretsiz servisi 15 dakika istek gelmezse uyur; ilk açılış 30–60 saniye sürer.
+
+### Netlify (uyumaz)
+
+`netlify.toml` sayfaları `public/` klasöründen CDN ile sunar, `/api/*` isteklerini `netlify/functions/api.mts` fonksiyonuna yollar. Fonksiyon aynı Hono uygulamasını yalnızca API olarak çalıştırır (`createApp(key, { serveFiles: false })`). Başarılı API cevapları Netlify CDN'inde 1 saat tutulur (`Netlify-CDN-Cache-Control`), böylece EVDS'ye saatte yaklaşık bir istek gider. `EVDS_API_KEY` değerini sitenin ortam değişkenlerine girin.

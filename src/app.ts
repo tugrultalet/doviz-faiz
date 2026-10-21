@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
@@ -18,7 +18,17 @@ function cached<T>(load: () => Promise<T>) {
   };
 }
 
-export function createApp(key = process.env.EVDS_API_KEY) {
+/**
+ * Lets a CDN in front of the API (Netlify) keep a good answer for the same hour as the
+ * in-memory cache. Serverless instances are short-lived, so their own cache often starts empty.
+ * Other hosts ignore this header.
+ */
+function cdnCache(c: Context) {
+  c.header("Netlify-CDN-Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400, durable");
+}
+
+/** `serveFiles: false` gives the API only, for hosts that serve public/ themselves (Netlify). */
+export function createApp(key = process.env.EVDS_API_KEY, { serveFiles = true } = {}) {
   const app = new Hono();
   const fx = cached(() => fetchFx(key));
   const deposit = cached(() => fetchDepositRates(key));
@@ -28,7 +38,9 @@ export function createApp(key = process.env.EVDS_API_KEY) {
 
   app.get("/api/fx", async (c) => {
     try {
-      return c.json(await fx());
+      const data = await fx();
+      cdnCache(c);
+      return c.json(data);
     } catch (err) {
       console.error(err);
       return c.json({ error: "Kur verisi alınamadı. Daha sonra tekrar deneyin." }, 502);
@@ -37,7 +49,9 @@ export function createApp(key = process.env.EVDS_API_KEY) {
 
   app.get("/api/deposit-rate", async (c) => {
     try {
-      return c.json({ available: Boolean(key), rates: await deposit() });
+      const rates = await deposit();
+      if (key) cdnCache(c);
+      return c.json({ available: Boolean(key), rates });
     } catch (err) {
       console.error(err);
       return c.json({ available: false, rates: null, error: "Faiz verisi alınamadı. Oranı elle girin." });
@@ -48,6 +62,7 @@ export function createApp(key = process.env.EVDS_API_KEY) {
     try {
       const data = await gold();
       if (!data?.points.length) return c.json({ error: "Altın verisi yok. EVDS anahtarı gerekli." }, 503);
+      cdnCache(c);
       return c.json(data);
     } catch (err) {
       console.error(err);
@@ -60,6 +75,7 @@ export function createApp(key = process.env.EVDS_API_KEY) {
     const data = await stats();
     if (!data) return c.json({ error: "İstatistik verisi yok. EVDS anahtarı gerekli." }, 503);
     const byId = new Map(data.map((d) => [d.id, d]));
+    cdnCache(c);
     return c.json({
       charts: STAT_CHARTS.map(({ id, section, title, explain, unit, transform, reference }) => ({
         id, section, title, explain, unit, transform, reference, ...byId.get(id),
@@ -67,7 +83,13 @@ export function createApp(key = process.env.EVDS_API_KEY) {
     });
   });
 
-  app.get("/api/indicators", async (c) => c.json({ available: Boolean(key), indicators: await indicators() }));
+  app.get("/api/indicators", async (c) => {
+    const data = await indicators();
+    if (key) cdnCache(c);
+    return c.json({ available: Boolean(key), indicators: data });
+  });
+
+  if (!serveFiles) return app;
 
   // Always revalidate page files so phones do not keep an old CSS/JS after a deploy.
   app.use("/*", async (c, next) => {

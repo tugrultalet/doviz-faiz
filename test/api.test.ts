@@ -158,3 +158,21 @@ describe("/api/stats", () => {
     expect(charts.find((c: { id: string }) => c.id === "unemployment").error).toMatch(/EVDS 500/);
   });
 });
+
+describe("API-only app (Netlify)", () => {
+  it("serves no page files and lets the CDN keep good answers for an hour", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({ rates: { "2026-10-20": { TRY: 42 } } })));
+    const app = createApp("", { serveFiles: false });
+    expect((await app.request("/")).status).toBe(404);
+    const res = await app.request("/api/fx");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Netlify-CDN-Cache-Control")).toMatch(/s-maxage=3600/);
+  });
+
+  it("does not let the CDN keep failures", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json({}, 500)));
+    const res = await createApp("", { serveFiles: false }).request("/api/fx");
+    expect(res.status).toBe(502);
+    expect(res.headers.get("Netlify-CDN-Cache-Control")).toBeNull();
+  });
+});
