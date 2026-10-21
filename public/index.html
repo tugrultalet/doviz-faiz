@@ -13,6 +13,8 @@
       if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
       if (localStorage.getItem("doviz-faiz-sidebar-collapsed") === "1") document.documentElement.classList.add("sb-collapsed");
     } catch {}
+    // Home-screen app (iOS reports it reliably through navigator.standalone).
+    if (navigator.standalone === true || matchMedia("(display-mode: standalone)").matches) document.documentElement.classList.add("standalone");
     // iOS Safari ignores user-scalable=no; block pinch and double-tap zoom so the page behaves like an app.
     document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
     document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });

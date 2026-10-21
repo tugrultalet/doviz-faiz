@@ -457,9 +457,9 @@ section[id] { scroll-margin-top: 12px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ptr { background: rgb(40 40 38 / 0.6); border-color: rgb(255 255 255 / 0.14); box-shadow: 0 6px 18px rgb(0 0 0 / 0.5); } }
 :root[data-theme="dark"] .ptr { background: rgb(40 40 38 / 0.6); border-color: rgb(255 255 255 / 0.14); box-shadow: 0 6px 18px rgb(0 0 0 / 0.5); }
 
-/* Home-screen app (no Safari toolbar): sit the tab bar just above the home indicator, like native iOS apps.
-   In the Safari browser this rule does not apply, so the bar keeps its place above Safari's toolbar. */
-@media (max-width: 1023px) and (display-mode: standalone) {
-  .tabbar { bottom: max(4px, calc(env(safe-area-inset-bottom) - 28px)); }
-  body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
+/* Home-screen app (no Safari toolbar): tab bar at the very bottom, over the home-indicator area.
+   The .standalone class is set in the page head; the Safari browser layout is unchanged. */
+@media (max-width: 1023px) {
+  .standalone .tabbar { bottom: max(4px, calc(env(safe-area-inset-bottom) - 30px)); }
+  .standalone body { padding-bottom: calc(72px + env(safe-area-inset-bottom)); }
 }
