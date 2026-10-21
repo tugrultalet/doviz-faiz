@@ -32,8 +32,7 @@ if (key) {
     }
     if (process.env.EVDS_DISCOVER === "1") {
       await discoverSeries(key, [
-        ["Kripto", ""],
-        ["Kripto Varlık", ""],
+        ["Mevduat (Türlerine Göre)", ""],
       ]).catch((err: Error) => console.log("[evds-discover] failed:", err.message));
     }
   })();

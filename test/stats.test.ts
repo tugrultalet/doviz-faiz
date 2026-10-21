@@ -27,12 +27,15 @@ describe("stats transforms", () => {
     expect(sum12(pts.filter((p) => p.date !== "2025-06-01"))).toEqual([]);
   });
 
-  it("shareOf divides summed series on common months", () => {
+  it("shareOf divides summed series; empty minor parts of the total count as 0", () => {
     const raw = {
-      A: monthly("2026-01", [10, 20]),
+      A: monthly("2026-01", [10, 20, 30]),
       B: monthly("2026-01", [5, 5]),
       C: monthly("2026-01", [85]),
     };
-    expect(shareOf(raw, ["A", "B"], ["A", "B", "C"])).toEqual([{ date: "2026-01-01", value: 15 }]);
+    expect(shareOf(raw, ["A", "B"], ["A", "B", "C"])).toEqual([
+      { date: "2026-01-01", value: 15 },
+      { date: "2026-02-01", value: 100 },
+    ]);
   });
 });

@@ -217,16 +217,17 @@ export function sum12(points: Point[]): Point[] {
   });
 }
 
-/** % share of sum(num) in sum(den), on months where every series has a value. */
+/**
+ * % share of sum(num) in sum(den). A month needs every numerator series and the first denominator series;
+ * other denominator parts that EVDS left empty count as 0 (small items such as certificates stop reporting).
+ */
 export function shareOf(raw: Record<string, Point[]>, num: string[], den: string[]): Point[] {
   const maps = Object.fromEntries(Object.entries(raw).map(([k, pts]) => [k, new Map(pts.map((p) => [p.date, p.value]))]));
-  const dates = raw[den[0]].map((p) => p.date);
+  const dates = (raw[den[0]] ?? []).map((p) => p.date);
   return dates.flatMap((date) => {
-    const pick = (codes: string[]) => codes.map((c) => maps[c]?.get(date));
-    const n = pick(num);
-    const d = pick(den);
-    if ([...n, ...d].some((v) => v == null)) return [];
-    const total = (d as number[]).reduce((a, b) => a + b, 0);
+    const n = num.map((c) => maps[c]?.get(date));
+    if (n.some((v) => v == null)) return [];
+    const total = den.reduce((sum, c) => sum + (maps[c]?.get(date) ?? 0), 0);
     return total ? [{ date, value: ((n as number[]).reduce((a, b) => a + b, 0) / total) * 100 }] : [];
   });
 }
