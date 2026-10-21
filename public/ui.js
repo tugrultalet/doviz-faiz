@@ -262,6 +262,7 @@ function setupTabBlob(tabbar) {
       }
       tabs[activeIndex].classList.remove("active");
       tab.classList.add("active");
+      document.documentElement.classList.add("page-leave");
       place(i); // the end state, so the drop does not jump back before the next page shows
       let gone = false;
       const go = () => {
@@ -275,6 +276,7 @@ function setupTabBlob(tabbar) {
   // Back button from the next page (back-forward cache): show this page's own tab again.
   addEventListener("pageshow", (e) => {
     if (!e.persisted) return;
+    document.documentElement.classList.remove("page-leave", "page-enter");
     tabs.forEach((t, i) => t.classList.toggle("active", i === activeIndex));
     place(activeIndex);
   });

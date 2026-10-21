@@ -14,6 +14,8 @@
     } catch {}
     // Home-screen app (iOS reports it reliably through navigator.standalone).
     if (navigator.standalone === true || matchMedia("(display-mode: standalone)").matches) document.documentElement.classList.add("standalone");
+    // Arrived through the tab bar: fade in from dark (see .page-enter in style.css).
+    try { if (sessionStorage.getItem("doviz-faiz-tab-from") != null) document.documentElement.classList.add("page-enter"); } catch {}
     document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
     document.addEventListener("touchmove", (e) => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
   </script>
