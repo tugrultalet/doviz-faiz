@@ -408,20 +408,12 @@ main > section:first-of-type h2 { margin-top: 8px; }
   }
   .tab-blob.ready { opacity: 1; }
 }
-/* Page change on phones: the page darkens and fades out, the next one fades in from dark.
-   The veil sits under the tab bar (z-index 30), so the tab bar stays bright. */
+/* Page change on phones: the page fades out, the next one fades in. The tab bar stays as it is. */
 @media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
-  body::after {
-    content: ""; position: fixed; inset: 0; z-index: 25; pointer-events: none;
-    background: #000; opacity: 0; transition: opacity 280ms ease;
-  }
-  main { transition: opacity 280ms ease; }
-  .page-leave body::after { opacity: 0.4; }
+  main { transition: opacity 250ms ease; }
   .page-leave main { opacity: 0; }
-  .page-enter body::after { animation: veil-out 380ms ease-out both; }
-  .page-enter main { animation: page-in 380ms ease-out both; }
+  .page-enter main { animation: page-in 350ms ease-out both; }
 }
-@keyframes veil-out { from { opacity: 0.4; } to { opacity: 0; } }
 @keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
 @media (max-width: 1023px) and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .tabbar {
