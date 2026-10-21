@@ -127,6 +127,7 @@ export function setupSidebar(active) {
       (n) => `<a href="${n.href}" class="tab${n.id === active ? " active" : ""}" ${n.id === active ? 'aria-current="page"' : ""}>${n.icon}<span>${n.short ?? n.label}</span></a>`,
     ).join("");
   document.body.append(tabbar);
+  setupTabBlob(tabbar);
 
   aside.querySelector("[data-sb-collapse]").addEventListener("click", () => {
     writeFlag(SIDEBAR_KEY, document.documentElement.classList.toggle("sb-collapsed"));
@@ -195,4 +196,87 @@ export function setupPullToRefresh() {
       location.reload();
     } else reset();
   });
+}
+
+// ---- Tab bar "liquid drop": the active pill slides between tabs, stretching like a drop ----
+
+const TAB_FROM_KEY = "doviz-faiz-tab-from";
+const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function setupTabBlob(tabbar) {
+  const tabs = [...tabbar.querySelectorAll(".tab")];
+  const activeIndex = tabs.findIndex((t) => t.classList.contains("active"));
+  if (activeIndex < 0) return;
+  const blob = document.createElement("span");
+  blob.className = "tab-blob";
+  tabbar.prepend(blob);
+
+  const rect = (i) => ({ x: tabs[i].offsetLeft, w: tabs[i].offsetWidth });
+  const place = (i) => {
+    const r = rect(i);
+    blob.style.transform = `translateX(${r.x}px)`;
+    blob.style.width = `${r.w}px`;
+  };
+
+  /** Moves the drop from tab `from` to tab `to`: stretch over both, then pull in with a small overshoot. */
+  const slide = (from, to, duration = 460) => {
+    const a = rect(from);
+    const b = rect(to);
+    const left = Math.min(a.x, b.x);
+    const span = Math.max(a.x + a.w, b.x + b.w) - left;
+    const overshoot = (b.x - a.x) * 0.06;
+    return blob.animate(
+      [
+        { transform: `translateX(${a.x}px) scaleY(1)`, width: `${a.w}px` },
+        { transform: `translateX(${left}px) scaleY(0.86)`, width: `${span}px`, offset: 0.45 },
+        { transform: `translateX(${b.x + overshoot}px) scaleY(1.04)`, width: `${b.w}px`, offset: 0.8 },
+        { transform: `translateX(${b.x}px) scaleY(1)`, width: `${b.w}px` },
+      ],
+      { duration, easing: "cubic-bezier(0.3, 0.7, 0.2, 1)" },
+    );
+  };
+
+  place(activeIndex);
+  requestAnimationFrame(() => blob.classList.add("ready"));
+
+  // Arrived from another tab: finish the slide that started on the previous page.
+  let from = null;
+  try {
+    from = sessionStorage.getItem(TAB_FROM_KEY);
+    sessionStorage.removeItem(TAB_FROM_KEY);
+  } catch {
+    // storage blocked: no carry-over animation
+  }
+  if (from != null && Number(from) !== activeIndex && tabs[Number(from)] && !reducedMotion()) {
+    slide(Number(from), activeIndex, 380);
+  }
+
+  tabs.forEach((tab, i) => {
+    tab.addEventListener("click", (e) => {
+      if (i === activeIndex || reducedMotion() || !tab.href) return;
+      e.preventDefault();
+      try {
+        sessionStorage.setItem(TAB_FROM_KEY, String(activeIndex));
+      } catch {
+        // ignore
+      }
+      tabs[activeIndex].classList.remove("active");
+      tab.classList.add("active");
+      place(i); // the end state, so the drop does not jump back before the next page shows
+      let gone = false;
+      const go = () => {
+        if (!gone) location.href = tab.href;
+        gone = true;
+      };
+      slide(activeIndex, i, 300).onfinish = go;
+      setTimeout(go, 400); // safety net if the animation does not finish
+    });
+  });
+  // Back button from the next page (back-forward cache): show this page's own tab again.
+  addEventListener("pageshow", (e) => {
+    if (!e.persisted) return;
+    tabs.forEach((t, i) => t.classList.toggle("active", i === activeIndex));
+    place(activeIndex);
+  });
+  addEventListener("resize", () => place(tabs.findIndex((t) => t.classList.contains("active"))));
 }
