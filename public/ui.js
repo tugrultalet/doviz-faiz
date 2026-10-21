@@ -105,7 +105,7 @@ export function setupSidebar(active) {
   aside.setAttribute("aria-label", "Ana menü");
   aside.innerHTML = `
     <div class="sb-header">
-      <a href="/" class="sb-brand" title="Döviz mi, faiz mi?"><span class="sb-logo">${ICONS.logo}</span><span>Döviz mi, faiz mi?</span></a>
+      <a href="/" class="sb-brand" title="Tuğrul Tale"><span class="sb-logo">${ICONS.logo}</span><span>Tuğrul Tale</span></a>
     </div>
     <nav class="sb-content">
       <div class="sb-group-label">Sayfalar</div>
