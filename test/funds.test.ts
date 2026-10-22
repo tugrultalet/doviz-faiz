@@ -46,11 +46,11 @@ describe("mergeFundList", () => {
         { fonKodu: "FI5", fonUnvan: "QNB PORTFÖY PARA PİYASASI (TL) FONU", tarih: "2026-10-21T00:00:00", fiyat: 788.3, kisiSayisi: 10, portfoyBuyukluk: 1.1e11 },
         { fonKodu: "AAL", fonUnvan: "ATA PORTFÖY PARA PİYASASI (TL) FONU", tarih: "2026-10-21", fiyat: 3.7, kisiSayisi: 4232, portfoyBuyukluk: 1.7e9 },
       ],
-      [{ fonKodu: "AAL", fonUnvan: "ATA PORTFÖY PARA PİYASASI (TL) FONU", fonTurAciklama: "Para Piyasası Şemsiye Fonu", riskDegeri: "1", getiri1y: 47.1 }],
+      [{ fonKodu: "AAL", fonUnvan: "ATA PORTFÖY PARA PİYASASI (TL) FONU", fonTurAciklama: "Para Piyasası Şemsiye Fonu", riskDegeri: "1", getiri1a: 3.1, getiri3a: 10, getiri1y: 47.1 }],
     );
     expect(list.map((f) => f.code)).toEqual(["AAL", "FI5"]);
-    expect(list[0]).toMatchObject({ risk: 1, tefas: true, return1y: 47.1, date: "2026-10-21" });
-    expect(list[1]).toMatchObject({ risk: null, tefas: false, type: "Para Piyasası Şemsiye Fonu", date: "2026-10-21" });
+    expect(list[0]).toMatchObject({ risk: 1, tefas: true, return1m: 3.1, return3m: 10, return1y: 47.1, date: "2026-10-21" });
+    expect(list[1]).toMatchObject({ risk: null, return1m: null, tefas: false, type: "Para Piyasası Şemsiye Fonu", date: "2026-10-21" });
   });
 
   it("guesses types from Turkish names", () => {

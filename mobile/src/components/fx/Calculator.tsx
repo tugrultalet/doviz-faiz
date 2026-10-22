@@ -54,7 +54,7 @@ export function Calculator({ market, trends, input }: { market: Market; trends: 
   const changedRates = (Object.keys(s.rates) as RateKey[]).filter((k) => s.rates[k] != null);
 
   return (
-    <Card tint={t.accentSoft} style={{ gap: 12 }}>
+    <Card tint={t.accentSoft} style={{ gap: 10 }}>
       <View style={styles.row}>
         <Field
           style={{ flex: 1 }}

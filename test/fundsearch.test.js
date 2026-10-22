@@ -89,3 +89,25 @@ describe("comparison helpers", () => {
     expect(s.avgAnnual).toBe(30);
   });
 });
+
+describe("topFunds", () => {
+  const list = [
+    { code: "A", name: "A", type: "Hisse Senedi Şemsiye Fonu", risk: 6, return1y: 80, return1m: -2 },
+    { code: "B", name: "B", type: "Para Piyasası Şemsiye Fonu", risk: 1, return1y: 48, return1m: 3.2 },
+    { code: "C", name: "C", type: "Para Piyasası Şemsiye Fonu", risk: 2, return1y: 46, return1m: 3.5 },
+    { code: "D", name: "D", type: null, risk: null, return1y: null, return1m: null },
+  ];
+
+  it("ranks by the chosen period and skips funds without TEFAS data", async () => {
+    const { topFunds } = await import("../public/fundsearch.js");
+    expect(topFunds(list, { period: "1y" }).items.map((f) => f.code)).toEqual(["A", "B", "C"]);
+    expect(topFunds(list, { period: "1m" }).items.map((f) => f.code)).toEqual(["C", "B", "A"]);
+  });
+
+  it("filters by risk group, type and limit", async () => {
+    const { topFunds } = await import("../public/fundsearch.js");
+    expect(topFunds(list, { riskId: "low" }).items.map((f) => f.code)).toEqual(["B", "C"]);
+    expect(topFunds(list, { riskId: "high" }).items.map((f) => f.code)).toEqual(["A"]);
+    expect(topFunds(list, { typeId: "pp", period: "1m", limit: 1 })).toMatchObject({ total: 2, items: [{ code: "C" }] });
+  });
+});

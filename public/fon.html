@@ -61,6 +61,26 @@
       <p class="muted small compare-hint" id="compare-hint" hidden></p>
     </section>
 
+    <section class="top-funds" id="top-section" hidden>
+      <details class="card" id="top-details" open>
+        <summary><h2>En çok kazandıranlar</h2><span class="muted small" id="top-count"></span></summary>
+        <div class="top-controls">
+          <div class="tabs top-period" role="tablist" aria-label="Dönem" id="top-period"></div>
+          <label class="top-risk">
+            <span class="visually-hidden">Risk grubu</span>
+            <select id="top-risk"></select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table class="returns top-table" id="top-table"></table>
+        </div>
+        <p class="muted small">
+          Yukarıdaki tür filtresi bu listeye de uygulanır. Sadece TEFAS'ta işlem gören ve risk değeri yayımlanan fonlar sıralanır.
+          "Serbest" fonlar sadece nitelikli yatırımcılara açıktır. Bir satıra dokunarak fonu açın.
+        </p>
+      </details>
+    </section>
+
     <div id="fund-view" hidden>
       <div class="fund-title">
         <h2 id="fund-name"></h2>

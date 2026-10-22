@@ -40,8 +40,8 @@ export function Screen({ children, refreshing, onRefresh }: PropsWithChildren<{ 
 
 type Variant = 'title' | 'headline' | 'body' | 'sub' | 'caption' | 'big';
 const variants: Record<Variant, object> = {
-  big: { fontSize: 28, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  title: { fontSize: 20, fontWeight: '700' },
+  big: { fontSize: 24, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  title: { fontSize: 18, fontWeight: '700' },
   headline: { fontSize: 16, fontWeight: '600' },
   body: { fontSize: 16 },
   sub: { fontSize: 14 },
@@ -220,19 +220,19 @@ export function Legend({ items }: { items: { label: string; color: string }[] })
 export const Swatch = ({ color }: { color: string }) => <View style={[styles.swatch, { backgroundColor: color }]} />;
 
 const styles = StyleSheet.create({
-  screen: { padding: 16, paddingBottom: 48, gap: 14 },
-  card: { borderRadius: 16, padding: 14, gap: 6, borderCurve: 'continuous' },
-  sectionTitle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 },
+  screen: { paddingHorizontal: 12, paddingTop: 8, paddingBottom: 40, gap: 10 },
+  card: { borderRadius: 14, padding: 12, gap: 4, borderCurve: 'continuous' },
+  sectionTitle: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   badge: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
   segmented: { flexDirection: 'row', borderRadius: 10, padding: 2, gap: 2 },
-  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 7, paddingHorizontal: 4, borderRadius: 8 },
+  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6, paddingHorizontal: 4, borderRadius: 8 },
   segmentActive: { shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 3, shadowOffset: { width: 0, height: 1 }, elevation: 1 },
   fieldLabel: { marginBottom: 4, marginLeft: 2 },
   field: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 12, gap: 6, borderCurve: 'continuous' },
-  fieldInput: { flex: 1, paddingVertical: 10, fontVariant: ['tabular-nums'], minWidth: 0 },
+  fieldInput: { flex: 1, paddingVertical: 8, fontVariant: ['tabular-nums'], minWidth: 0 },
   hint: { marginTop: 4, marginLeft: 2 },
-  collapsibleHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14 },
-  collapsibleBody: { paddingHorizontal: 14, paddingBottom: 14, gap: 10 },
+  collapsibleHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 11 },
+  collapsibleBody: { paddingHorizontal: 12, paddingBottom: 12, gap: 8 },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   swatch: { width: 10, height: 10, borderRadius: 3 },

@@ -62,7 +62,7 @@ export default function StatsScreen() {
             })}
           </ScrollView>
           {shown.map((s) => (
-            <View key={s} style={{ gap: 12 }}>
+            <View key={s} style={{ gap: 10 }}>
               <SectionTitle>{s}</SectionTitle>
               {charts
                 .filter((c) => c.section === s)
@@ -137,6 +137,6 @@ function StatCard({ chart }: { chart: StatChart }) {
 
 const styles = StyleSheet.create({
   chips: { gap: 8, paddingVertical: 2 },
-  chip: { borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 },
+  chip: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   latest: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

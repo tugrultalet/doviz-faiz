@@ -12,7 +12,9 @@ export type FundListItem = {
   investors: number | null;
   price: number | null;
   date: string | null; // YYYY-MM-DD of the price
-  return1y: number | null; // % from TEFAS (only funds traded on TEFAS)
+  return1m: number | null; // % from TEFAS (only funds traded on TEFAS)
+  return3m: number | null;
+  return1y: number | null;
   tefas: boolean; // traded on TEFAS (has period returns and risk value)
 };
 
@@ -47,7 +49,15 @@ const ymd = (d: Date) => d.toISOString().slice(0, 10).replaceAll("-", "");
 const num = (v: unknown) => (v == null || v === "" || !Number.isFinite(Number(v)) ? null : Number(v));
 
 type GeneralRow = { fonKodu: string; fonUnvan: string; tarih: string; fiyat: number; kisiSayisi: number; portfoyBuyukluk: number };
-type ReturnRow = { fonKodu: string; fonUnvan: string; fonTurAciklama: string | null; riskDegeri: string | number | null; getiri1y: number | null };
+type ReturnRow = {
+  fonKodu: string;
+  fonUnvan: string;
+  fonTurAciklama: string | null;
+  riskDegeri: string | number | null;
+  getiri1a?: number | null;
+  getiri3a?: number | null;
+  getiri1y: number | null;
+};
 
 /** Latest prices of all investment funds: tries today, then up to 7 days back (weekends, holidays). */
 async function latestGeneral(now: Date): Promise<GeneralRow[]> {
@@ -105,6 +115,8 @@ export function mergeFundList(general: GeneralRow[], returns: ReturnRow[]): Fund
       investors: num(g.kisiSayisi),
       price: num(g.fiyat),
       date: g.tarih ? g.tarih.slice(0, 10) : null,
+      return1m: num(r?.getiri1a),
+      return3m: num(r?.getiri3a),
       return1y: num(r?.getiri1y),
       tefas: Boolean(r),
     });
@@ -114,7 +126,8 @@ export function mergeFundList(general: GeneralRow[], returns: ReturnRow[]): Fund
     if (seen.has(r.fonKodu)) continue;
     out.push({
       code: r.fonKodu, name: r.fonUnvan, type: r.fonTurAciklama, risk: num(r.riskDegeri), size: null,
-      investors: null, price: null, date: null, return1y: num(r.getiri1y), tefas: true,
+      investors: null, price: null, date: null, return1m: num(r.getiri1a), return3m: num(r.getiri3a),
+      return1y: num(r.getiri1y), tefas: true,
     });
   }
   return out.sort((a, b) => a.code.localeCompare(b.code));

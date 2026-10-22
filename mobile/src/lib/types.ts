@@ -59,6 +59,8 @@ export type Fund = {
   investors: number | null;
   price: number | null;
   date: string | null;
+  return1m: number | null;
+  return3m: number | null;
   return1y: number | null;
   tefas: boolean;
 };

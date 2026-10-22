@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { BarChart } from '@/components/BarChart';
 import { FundPicker, shortType } from '@/components/FundPicker';
 import { LineChart } from '@/components/LineChart';
-import { Card, ErrorNote, Grid, half, Legend, Screen, SectionTitle, Segmented, T, tap } from '@/components/ui';
+import { Card, Collapsible, ErrorNote, Grid, half, Legend, Screen, SectionTitle, Segmented, T, tap } from '@/components/ui';
 import { useAppStore } from '@/features/store';
 import { fetchFundHistory } from '@/lib/api';
 import { fmtDate, nf } from '@/lib/format';
-import { alignCurves, alignMonths, fundSummary } from '@/lib/funds';
+import { FUND_TYPES, RANK_PERIODS, RISK_GROUPS, alignCurves, alignMonths, fundSummary, topFunds } from '@/lib/funds';
 import type { Fund, FundHistory, FundMonth } from '@/lib/types';
 import { useTheme, type Theme } from '@/theme';
 
@@ -150,6 +150,14 @@ export default function FundsScreen() {
         ) : null}
       </View>
 
+      {list.length ? (
+        <TopFunds
+          funds={list}
+          current={fundCode}
+          onOpen={(code) => setFundCode(code)}
+        />
+      ) : null}
+
       {main ? (
         <>
           <Summary item={main} />
@@ -189,6 +197,97 @@ export default function FundsScreen() {
         }}
       />
     </Screen>
+  );
+}
+
+type PeriodId = '1y' | '1m';
+type RiskId = 'all' | 'low' | 'high';
+
+/** The 15 funds with the highest return over the chosen period, in a risk group and fund type. */
+function TopFunds({ funds, current, onOpen }: { funds: Fund[]; current: string; onOpen: (code: string) => void }) {
+  const t = useTheme();
+  const [period, setPeriod] = useState<PeriodId>('1y');
+  const [risk, setRisk] = useState<RiskId>('all');
+  const [typeId, setTypeId] = useState('all');
+  const { total, items, field } = useMemo(
+    () => topFunds(funds, { period, riskId: risk, typeId }) as { total: number; items: Fund[]; field: 'return1y' | 'return1m' },
+    [funds, period, risk, typeId],
+  );
+  const riskColor = (r: number) => (r <= 3 ? t.good : r <= 5 ? t.secondary : t.bad);
+  const riskBg = (r: number) => (r <= 3 ? t.goodSoft : r <= 5 ? t.fill : t.badSoft);
+  return (
+    <Collapsible title="En çok kazandıranlar">
+      <Segmented options={RANK_PERIODS.map((p) => ({ key: p.id as PeriodId, label: p.label }))} value={period} onChange={setPeriod} />
+      <Segmented
+        options={RISK_GROUPS.map((g) => ({ key: g.id as RiskId, label: g.id === 'all' ? 'Tüm riskler' : g.id === 'low' ? 'Risk 1–3' : 'Risk 4–7' }))}
+        value={risk}
+        onChange={setRisk}
+      />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.typeRow}>
+        {FUND_TYPES.map((ft) => {
+          const on = ft.id === typeId;
+          return (
+            <Pressable
+              key={ft.id}
+              accessibilityRole="button"
+              accessibilityState={{ selected: on }}
+              onPress={() => {
+                tap();
+                setTypeId(ft.id);
+              }}
+              style={[styles.typeChip, { backgroundColor: on ? t.label : t.fill }]}
+            >
+              <T v="caption" color={on ? t.bg : t.secondary} style={{ fontWeight: '600' }}>
+                {ft.label}
+              </T>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+      <T v="caption" muted>
+        {total} fon arasından ilk {items.length}
+      </T>
+      <View>
+        {items.map((f, i) => (
+          <Pressable
+            key={f.code}
+            accessibilityRole="button"
+            accessibilityLabel={`${i + 1}. ${f.code}, ${f.name}`}
+            onPress={() => {
+              tap();
+              onOpen(f.code);
+            }}
+            style={({ pressed }) => [
+              styles.topRow,
+              { borderBottomColor: t.separator, backgroundColor: pressed || f.code === current ? t.fill : 'transparent' },
+            ]}
+          >
+            <T v="caption" muted num style={styles.rank}>
+              {i + 1}
+            </T>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <T v="sub" style={{ fontWeight: '700' }}>
+                {f.code}
+              </T>
+              <T v="caption" muted numberOfLines={1}>
+                {f.name}
+              </T>
+            </View>
+            <View style={[styles.riskBadge, { backgroundColor: riskBg(f.risk ?? 0) }]}>
+              <T v="caption" color={riskColor(f.risk ?? 0)} style={{ fontWeight: '700' }}>
+                {f.risk}
+              </T>
+            </View>
+            <T v="sub" num style={styles.topRet}>
+              {pct(f[field], field === 'return1m' ? 2 : 1)}
+            </T>
+          </Pressable>
+        ))}
+      </View>
+      <T v="caption" muted>
+        Sadece TEFAS&apos;ta işlem gören ve risk değeri yayımlanan fonlar sıralanır. &quot;Serbest&quot; fonlar sadece nitelikli yatırımcılara açıktır. Bir satıra dokunarak fonu açın.
+      </T>
+    </Collapsible>
   );
 }
 
@@ -373,4 +472,10 @@ const styles = StyleSheet.create({
   tr: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'transparent' },
   td: { width: 78, textAlign: 'right' },
   head: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 4 },
+  typeRow: { gap: 6 },
+  typeChip: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: StyleSheet.hairlineWidth, borderRadius: 6 },
+  rank: { width: 18 },
+  riskBadge: { minWidth: 22, height: 22, borderRadius: 6, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  topRet: { width: 66, textAlign: 'right', fontWeight: '700' },
 });

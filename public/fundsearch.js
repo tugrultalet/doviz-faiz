@@ -114,3 +114,30 @@ export function fundSummary(history) {
     last: last ?? null,
   };
 }
+
+/** Risk groups for the ranking (SPK risk value 1–7). */
+export const RISK_GROUPS = [
+  { id: "all", label: "Tüm riskler", min: 1, max: 7 },
+  { id: "low", label: "Düşük risk (1–3)", min: 1, max: 3 },
+  { id: "high", label: "Yüksek risk (4–7)", min: 4, max: 7 },
+];
+
+/** Ranking periods: the TEFAS return field for each. */
+export const RANK_PERIODS = [
+  { id: "1y", label: "Son 1 yıl", field: "return1y" },
+  { id: "1m", label: "Son 1 ay", field: "return1m" },
+];
+
+/**
+ * The funds with the highest return over `period`, inside a risk group and a fund type.
+ * Only funds with a TEFAS return and risk value can be ranked (funds traded on TEFAS).
+ */
+export function topFunds(funds, { period = "1y", riskId = "all", typeId = "all", limit = 15 } = {}) {
+  const field = (RANK_PERIODS.find((p) => p.id === period) ?? RANK_PERIODS[0]).field;
+  const group = RISK_GROUPS.find((g) => g.id === riskId) ?? RISK_GROUPS[0];
+  const ranked = funds.filter(
+    (f) => f[field] != null && f.risk != null && f.risk >= group.min && f.risk <= group.max && typeMatches(f, typeId),
+  );
+  ranked.sort((a, b) => b[field] - a[field]);
+  return { total: ranked.length, items: ranked.slice(0, limit), field };
+}

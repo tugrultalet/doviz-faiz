@@ -1,4 +1,4 @@
-import { FUND_TYPES, alignCurves, alignMonths, fundSummary, indexFunds, searchFunds } from "./fundsearch.js";
+import { FUND_TYPES, RANK_PERIODS, RISK_GROUPS, alignCurves, alignMonths, fundSummary, indexFunds, searchFunds, topFunds } from "./fundsearch.js";
 import { revealPage, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
@@ -35,6 +35,8 @@ let current = null; // { fund, history } of the main fund
 let compare = []; // [{ fund, history }] shown next to the main fund
 let pickFor = "main"; // which slot the search box fills: "main" | "compare"
 let mode = "annualized";
+let topPeriod = "1y";
+let topRisk = "all";
 let requestId = 0;
 const historyCache = new Map(); // code -> Promise of /api/funds/:code
 
@@ -159,10 +161,95 @@ $("fund-types").addEventListener("click", (e) => {
   if (!btn) return;
   typeId = btn.dataset.type;
   renderTypes();
+  renderTop();
   input.value = "";
   openList();
   input.focus();
 });
+
+// ---- Top funds ----
+
+const TOP_KEY = "doviz-faiz-top";
+
+function renderTopControls() {
+  $("top-period").innerHTML = RANK_PERIODS.map(
+    (p) => `<button type="button" role="tab" aria-selected="${p.id === topPeriod}" data-period="${p.id}">${p.label}</button>`,
+  ).join("");
+  $("top-risk").innerHTML = RISK_GROUPS.map((g) => `<option value="${g.id}"${g.id === topRisk ? " selected" : ""}>${g.label}</option>`).join("");
+}
+
+function renderTop() {
+  if (!funds.length) return;
+  $("top-section").hidden = false;
+  const { total, items, field } = topFunds(funds, { period: topPeriod, riskId: topRisk, typeId });
+  const typeLabel = FUND_TYPES.find((x) => x.id === typeId)?.label;
+  $("top-count").textContent = `${total} fon arasından ilk ${items.length}${typeId !== "all" ? ` · ${typeLabel}` : ""}`;
+  const shownCodes = new Set([current?.fund.code, ...compare.map((c) => c.fund.code)]);
+  const canAdd = compare.length < MAX_COMPARE;
+  const rows = items
+    .map(
+      (f, i) => `<tr data-code="${escapeHtml(f.code)}" tabindex="0" class="${f.code === current?.fund.code ? "current" : ""}">
+        <td class="rank">${i + 1}</td>
+        <th scope="row"><span class="top-code">${escapeHtml(f.code)}</span><span class="sub">${escapeHtml(f.name)}</span></th>
+        <td class="top-type">${escapeHtml(shortType(f.type))}</td>
+        <td><span class="risk-badge risk-${f.risk}">${f.risk}</span></td>
+        <td class="top-ret">${fmtPct(f[field], field === "return1m" ? 2 : 1)}</td>
+        <td>${shownCodes.has(f.code) || !canAdd || !current ? "" : `<button type="button" class="chip top-add" data-add="${escapeHtml(f.code)}" title="Karşılaştırmaya ekle">+</button>`}</td>
+      </tr>`,
+    )
+    .join("");
+  $("top-table").innerHTML = items.length
+    ? `<thead><tr><th>#</th><th>Fon</th><th class="top-type">Tür</th><th>Risk</th><th>${RANK_PERIODS.find((p) => p.id === topPeriod).label}</th><th></th></tr></thead><tbody>${rows}</tbody>`
+    : `<tbody><tr><td class="muted">Bu filtrelerle fon yok.</td></tr></tbody>`;
+}
+
+$("top-period").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-period]");
+  if (!btn) return;
+  topPeriod = btn.dataset.period;
+  saveTop();
+  renderTopControls();
+  renderTop();
+});
+$("top-risk").addEventListener("change", (e) => {
+  topRisk = e.target.value;
+  saveTop();
+  renderTop();
+});
+$("top-table").addEventListener("click", (e) => {
+  const add = e.target.closest("[data-add]");
+  if (add) {
+    addCompare(add.dataset.add);
+    return;
+  }
+  const row = e.target.closest("tr[data-code]");
+  if (!row) return;
+  selectFund(row.dataset.code).then(() => $("fund-view").scrollIntoView({ behavior: "smooth", block: "start" }));
+});
+$("top-table").addEventListener("keydown", (e) => {
+  const row = e.target.closest("tr[data-code]");
+  if (row && e.key === "Enter") row.click();
+});
+
+function saveTop() {
+  try {
+    localStorage.setItem(TOP_KEY, JSON.stringify({ period: topPeriod, risk: topRisk }));
+  } catch {
+    // private mode
+  }
+}
+
+function loadTop() {
+  try {
+    const v = JSON.parse(localStorage.getItem(TOP_KEY) || "{}");
+    if (RANK_PERIODS.some((p) => p.id === v.period)) topPeriod = v.period;
+    if (RISK_GROUPS.some((g) => g.id === v.risk)) topRisk = v.risk;
+  } catch {
+    // ignore
+  }
+  // Phones: start closed, so the chosen fund is not pushed far down.
+  if (matchMedia("(max-width: 700px)").matches) $("top-details").open = false;
+}
 
 // ---- Combobox (search + dropdown) ----
 
@@ -396,6 +483,7 @@ function renderFund() {
 
   renderCompareBar();
   renderCompareTable();
+  renderTop();
   renderCurve();
   renderMonths();
   revealPage();
@@ -550,10 +638,13 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
 
 setupSidebar("funds");
 renderTypes();
+loadTop();
+renderTopControls();
 
 (async () => {
   try {
     await loadList();
+    renderTop();
     // Read both saved choices first: choosing the main fund saves the state again.
     const params = new URL(location.href).searchParams;
     let start = params.get("kod")?.toUpperCase();

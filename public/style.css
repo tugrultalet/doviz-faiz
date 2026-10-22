@@ -539,3 +539,34 @@ section[id] { scroll-margin-top: 12px; }
 .returns td.best { color: var(--good); font-weight: 650; }
 .returns td.type-cell { white-space: normal; font-size: 0.8rem; color: var(--text-secondary); }
 .returns thead .swatch { margin-right: 5px; }
+
+/* ---- Fon page: top funds ranking ---- */
+.top-funds { margin-bottom: 20px; }
+.top-funds details > summary { list-style: none; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; cursor: pointer; }
+.top-funds details > summary::-webkit-details-marker { display: none; }
+.top-funds summary h2 { margin: 0; }
+.top-funds summary h2::after { content: " ▾"; color: var(--text-muted); font-size: 0.8rem; }
+.top-funds details[open] summary h2::after { content: " ▴"; }
+.top-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 14px 0 6px; }
+.top-period { grid-template-columns: repeat(2, 1fr); flex: 1 1 220px; max-width: 320px; }
+.top-risk select { padding: 9px 12px; border-radius: 10px; font-weight: 600; }
+.top-table tbody tr { cursor: pointer; }
+.top-table tbody tr:hover, .top-table tbody tr:focus-visible { background: var(--surface-2); outline: none; }
+.top-table tbody tr.current { background: var(--surface-2); }
+.top-table th[scope="row"] { max-width: 340px; }
+.top-table .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px; }
+.top-code { font-weight: 700; color: var(--text-primary); }
+.top-table td.rank { color: var(--text-muted); text-align: left; width: 1.5em; }
+.top-table td.top-ret { font-weight: 650; }
+.top-table .top-type { font-size: 0.8rem; color: var(--text-secondary); text-align: left; white-space: normal; }
+.risk-badge { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; background: var(--good-bg); color: var(--good); }
+.risk-badge.risk-4, .risk-badge.risk-5 { background: var(--neutral-bg); color: var(--text-primary); }
+.risk-badge.risk-6, .risk-badge.risk-7 { background: var(--bad-bg); color: var(--bad); }
+.top-add { padding: 2px 10px; font-size: 0.9rem; }
+@media (max-width: 700px) {
+  .top-table .top-type { display: none; }
+  .top-table th[scope="row"], .top-table .sub { max-width: 170px; }
+}
+.top-table thead th:nth-child(2), .top-table thead th:nth-child(1) { text-align: left; }
+.top-funds summary h2 { white-space: nowrap; }
+.top-funds summary #top-count { text-align: right; min-width: 0; }
