@@ -1,7 +1,10 @@
 import type { NativeStackNavigationOptions } from 'expo-router';
 import { Platform } from 'react-native';
 
+import { createElement } from 'react';
+
 import { useTheme } from '@/theme';
+import { AdvisorButton } from './AdvisorButton';
 
 const ios = Platform.OS === 'ios';
 
@@ -24,5 +27,7 @@ export function useStackOptions(): NativeStackNavigationOptions {
     headerLargeTitleStyle: { color: t.label },
     headerBackButtonDisplayMode: 'minimal',
     contentStyle: { backgroundColor: t.bg },
+    // Voice advisor on every tab.
+    headerRight: () => createElement(AdvisorButton),
   };
 }

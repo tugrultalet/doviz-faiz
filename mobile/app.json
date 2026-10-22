@@ -54,6 +54,13 @@
             }
           ]
         }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "microphonePermission": "Sesli yatırım danışmanıyla konuşabilmeniz için Finans mikrofonunuzu kullanır.",
+          "cameraPermission": "Finans kamerayı kullanmaz."
+        }
       ]
     ],
     "experiments": {

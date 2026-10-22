@@ -46,6 +46,28 @@ Dolar ve euro kuru, son 30 günlük değişim, gram altın (Altın sekmesi bir k
 - Widget ile uygulama `group.com.tugrultalet.finans` App Group'unu paylaşır. EAS bu yeteneği
   Apple hesabında kendisi açar.
 
+## Sesli yatırım danışmanı
+
+Her sekmenin sağ üstündeki **AI** düğmesi canlı bir sesli görüşme açar (OpenAI Realtime, WebRTC).
+Danışman "Yatırım danışmanınızla görüşüyorsunuz, buyrun." diyerek başlar. Kullanıcı istediği zaman söze girebilir.
+
+- Sunucu (`POST /api/advisor/session`, `src/advisor.ts`) OpenAI'dan 2 dakikalık bir anahtar alır. Danışmana
+  günün verilerini talimat olarak verir: kurlar, TCMB mevduat faizleri, enflasyon, TEFAS para piyasası fonları.
+  OpenAI anahtarı sunucuda kalır.
+- Danışman tutarı uygulamanın hesaplayıcısıyla hesaplar (`hesapla` aracı) ve fonları uygulamanın fon
+  listesinde arar (`fon_ara`). Bu araçlar telefonda çalışır: `src/features/advisor/tools.ts`.
+- Bir görüşme en fazla 15 dakika sürer. Sunucu IP başına saatte 10 görüşmeye izin verir.
+- Expo Go'da çalışmaz (WebRTC native kod ister). TestFlight build'inde çalışır.
+
+Sunucu ortam değişkenleri (Netlify → Project configuration → Environment variables, kapsam: Functions):
+
+| Değişken | Açıklama |
+|---|---|
+| `OPENAI_API_KEY` | Zorunlu. Yoksa danışman "şu an kapalı" der. |
+| `OPENAI_REALTIME_MODEL` | İsteğe bağlı, varsayılan `gpt-realtime-2.1`. |
+| `OPENAI_REALTIME_VOICE` | İsteğe bağlı, varsayılan `marin`. |
+| `FINANS_APP_TOKEN` | İsteğe bağlı. Verilirse sadece bu değeri gönderen uygulama görüşme açabilir. Aynı değer EAS'ta `EXPO_PUBLIC_APP_TOKEN` olarak tanımlanmalı. |
+
 ## API adresi
 
 Varsayılan: `https://finans-n8x9.netlify.app` (Netlify, uyumaz). Başka bir sunucu için `.env.local` dosyasına yazın:

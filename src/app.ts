@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { GREETING, createRealtimeSecret, marketBrief, rateLimiter } from "./advisor.js";
 import { FUND_CODE, fetchFundHistory, fetchFundList } from "./funds.js";
 import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
@@ -28,8 +29,19 @@ function cdnCache(c: Context) {
   c.header("Netlify-CDN-Cache-Control", "public, s-maxage=3600, stale-while-revalidate=86400, durable");
 }
 
-/** `serveFiles: false` gives the API only, for hosts that serve public/ themselves (Netlify). */
-export function createApp(key = process.env.EVDS_API_KEY, { serveFiles = true } = {}) {
+type AppOptions = {
+  /** false: the API only, for hosts that serve public/ themselves (Netlify). */
+  serveFiles?: boolean;
+  /** OpenAI key for the voice advisor; without it the advisor answers 503. */
+  openaiKey?: string;
+  /** When set, the advisor answers only requests with this value in the x-finans-app header. */
+  appToken?: string;
+};
+
+export function createApp(
+  key = process.env.EVDS_API_KEY,
+  { serveFiles = true, openaiKey = process.env.OPENAI_API_KEY, appToken = process.env.FINANS_APP_TOKEN }: AppOptions = {},
+) {
   const app = new Hono();
   const fx = cached(() => fetchFx(key));
   const deposit = cached(() => fetchDepositRates(key));
@@ -119,6 +131,32 @@ export function createApp(key = process.env.EVDS_API_KEY, { serveFiles = true } 
       console.error(err);
       fundHistory.delete(code);
       return c.json({ error: "Fon verisi alınamadı. Daha sonra tekrar deneyin." }, 502);
+    }
+  });
+
+  // Voice advisor: a short-lived OpenAI Realtime key plus today's data in the instructions.
+  const advisorLimit = rateLimiter(10, 60 * 60 * 1000);
+  app.post("/api/advisor/session", async (c) => {
+    c.header("Cache-Control", "no-store");
+    if (!openaiKey) return c.json({ error: "Sesli danışman şu an kapalı." }, 503);
+    if (appToken && c.req.header("x-finans-app") !== appToken) return c.json({ error: "Yetkisiz istek." }, 401);
+    const ip = c.req.header("x-nf-client-connection-ip") ?? c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ?? "?";
+    if (!advisorLimit(ip)) return c.json({ error: "Çok fazla görüşme başlattınız. Biraz sonra tekrar deneyin." }, 429);
+    // Missing data only makes the brief shorter; the call still starts.
+    const [fxData, depositData, indicatorData, fundData] = await Promise.allSettled([fx(), deposit(), indicators(), funds()]);
+    const value = <T,>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : null);
+    const brief = marketBrief({
+      fx: value(fxData),
+      deposit: value(depositData) as Parameters<typeof marketBrief>[0]["deposit"],
+      indicators: value(indicatorData) ?? {},
+      funds: value(fundData),
+    });
+    try {
+      const secret = await createRealtimeSecret(openaiKey, brief);
+      return c.json({ clientSecret: secret.value, expiresAt: secret.expiresAt, model: secret.model, greeting: GREETING });
+    } catch (err) {
+      console.error(err);
+      return c.json({ error: "Danışmana bağlanılamadı. Daha sonra tekrar deneyin." }, 502);
     }
   });
 

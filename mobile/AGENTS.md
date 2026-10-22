@@ -42,7 +42,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## This app
 
-- The app must keep running in **Expo Go**: use only modules bundled in Expo Go (check `expo/bundledNativeModules.json`). No `expo-dev-client`, no custom native code. The home-screen widget (`expo-widgets`) is the only exception and works only in EAS builds (TestFlight).
+- The app must keep running in **Expo Go**: use only modules bundled in Expo Go (check `expo/bundledNativeModules.json`). No `expo-dev-client`, no custom native code. Exceptions, loaded with a lazy `require` and skipped in Expo Go: the home-screen widget (`expo-widgets`) and the voice advisor (`react-native-webrtc`, `react-native-incall-manager`). They work only in EAS builds (TestFlight).
 - Calculations are shared with the website: import them from `@/lib/calc` (re-exports `../public/calc.js`). Do not copy them.
 - Data comes from the website's API (`EXPO_PUBLIC_API_URL`, default `https://finans-n8x9.netlify.app`).
 - Charts are drawn with `react-native-svg` (`src/components/LineChart.tsx`) so they look the same on iOS, Android and web.

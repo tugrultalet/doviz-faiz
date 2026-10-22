@@ -28,6 +28,7 @@ export default function RootLayout() {
         <StatusBar style={t.scheme === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.bg } }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="advisor" options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>
