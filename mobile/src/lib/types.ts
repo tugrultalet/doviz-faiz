@@ -47,3 +47,22 @@ export type StatChart = {
 };
 
 export type Currency = 'TRY' | 'USD' | 'EUR';
+
+/** One investment fund in the TEFAS list (`/api/funds`). */
+export type Fund = {
+  code: string;
+  name: string;
+  type: string | null;
+  /** SPK risk value 1–7; only for funds traded on TEFAS. */
+  risk: number | null;
+  size: number | null;
+  investors: number | null;
+  price: number | null;
+  date: string | null;
+  return1y: number | null;
+  tefas: boolean;
+};
+
+export type FundMonth = { month: string; end: string; pct: number; annualized: number; days: number; partial: boolean };
+/** 12 months of daily prices for one fund (`/api/funds/:code`). */
+export type FundHistory = { code: string; name: string | null; points: { date: string; price: number }[]; months: FundMonth[] };

@@ -15,6 +15,10 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Label>Altın</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'circle.hexagongrid', selected: 'circle.hexagongrid.fill' }} md="paid" />
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="funds">
+        <NativeTabs.Trigger.Label>Fon</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'chart.pie', selected: 'chart.pie.fill' }} md="pie_chart" />
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="stats">
         <NativeTabs.Trigger.Label>İstatistik</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'chart.bar', selected: 'chart.bar.fill' }} md="bar_chart" />

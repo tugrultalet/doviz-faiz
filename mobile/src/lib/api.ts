@@ -1,4 +1,4 @@
-import type { DepositRates, Fx, GoldPoint, Indicators, Market, StatChart } from './types';
+import type { DepositRates, Fund, FundHistory, Fx, GoldPoint, Indicators, Market, StatChart } from './types';
 
 /** Netlify serves the API from a function and its CDN, so it never sleeps (Render's free plan did). */
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'https://finans-n8x9.netlify.app').replace(/\/$/, '');
@@ -34,3 +34,5 @@ export async function fetchMarket(): Promise<Market> {
 
 export const fetchGold = () => getJson<{ points: GoldPoint[] }>('/api/gold').then((b) => b.points);
 export const fetchStats = () => getJson<{ charts: StatChart[] }>('/api/stats').then((b) => b.charts);
+export const fetchFunds = () => getJson<{ funds: Fund[] }>('/api/funds').then((b) => b.funds);
+export const fetchFundHistory = (code: string) => getJson<FundHistory>(`/api/funds/${encodeURIComponent(code)}`);

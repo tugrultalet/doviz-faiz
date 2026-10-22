@@ -2,8 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { fetchGold, fetchMarket, fetchStats } from '@/lib/api';
-import type { Currency, GoldPoint, Market, StatChart } from '@/lib/types';
+import { fetchFunds, fetchGold, fetchMarket, fetchStats } from '@/lib/api';
+import type { Currency, Fund, GoldPoint, Market, StatChart } from '@/lib/types';
 
 export type SettingKey = 'tlStopaj' | 'fxStopaj' | 'bondStopaj' | 'fxBuyTax' | 'spread' | 'tlGap' | 'inflation' | 'bondRate';
 export type Appearance = 'system' | 'light' | 'dark';
@@ -25,6 +25,10 @@ type State = {
   market: Loaded<Market>;
   gold: Loaded<GoldPoint[]>;
   stats: Loaded<StatChart[]>;
+  funds: Loaded<Fund[]>;
+  /** Fon tab: the main fund and up to two funds shown next to it. */
+  fundCode: string;
+  compareCodes: string[];
 
   setAppearance: (a: Appearance) => void;
   setOverride: (key: SettingKey, value: number | null) => void;
@@ -36,12 +40,15 @@ type State = {
   loadMarket: (force?: boolean) => Promise<void>;
   loadGold: (force?: boolean) => Promise<void>;
   loadStats: (force?: boolean) => Promise<void>;
+  loadFunds: (force?: boolean) => Promise<void>;
+  setFundCode: (code: string) => void;
+  setCompareCodes: (codes: string[]) => void;
 };
 
 /** The server refreshes its data hourly; a newer copy than this is not worth a request. */
 const FRESH_MS = 15 * 60 * 1000;
 
-type LoadedKey = 'market' | 'gold' | 'stats';
+type LoadedKey = 'market' | 'gold' | 'stats' | 'funds';
 
 export const useAppStore = create<State>()(
   persist(
@@ -69,6 +76,9 @@ export const useAppStore = create<State>()(
         market: empty(),
         gold: empty(),
         stats: empty(),
+        funds: empty(),
+        fundCode: 'FI5',
+        compareCodes: [],
 
         setAppearance: (appearance) => set({ appearance }),
         setOverride: (key, value) =>
@@ -86,6 +96,10 @@ export const useAppStore = create<State>()(
         loadMarket: (force) => load('market', fetchMarket, force),
         loadGold: (force) => load('gold', fetchGold, force),
         loadStats: (force) => load('stats', fetchStats, force),
+        loadFunds: (force) => load('funds', fetchFunds, force),
+        // The main fund is never compared with itself.
+        setFundCode: (fundCode) => set((s) => ({ fundCode, compareCodes: s.compareCodes.filter((c) => c !== fundCode) })),
+        setCompareCodes: (compareCodes) => set({ compareCodes }),
       };
     },
     {
@@ -103,6 +117,9 @@ export const useAppStore = create<State>()(
         market: { ...s.market, loading: false, error: null },
         gold: { ...s.gold, loading: false, error: null },
         stats: { ...s.stats, loading: false, error: null },
+        funds: { ...s.funds, loading: false, error: null },
+        fundCode: s.fundCode,
+        compareCodes: s.compareCodes,
       }),
     },
   ),
