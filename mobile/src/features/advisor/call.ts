@@ -19,6 +19,10 @@ export type Line = { id: string; role: 'user' | 'assistant'; text: string };
 
 /** Every call ends after this, so a forgotten call does not run up the OpenAI bill. */
 const MAX_CALL_MS = 15 * 60 * 1000;
+/** The loudspeaker's last sound fades a little after the audio stream stops. */
+const MIC_REOPEN_MS = 400;
+/** If the end of the greeting is never reported, open the microphone anyway. */
+const GREETING_FALLBACK_MS = 10_000;
 
 type Session = { clientSecret: string; greeting: string };
 type ServerEvent = { type: string; [k: string]: unknown };
@@ -45,8 +49,37 @@ export function useAdvisorCall() {
     send?: (event: object) => void;
     pending: PendingCall[];
     timer?: ReturnType<typeof setTimeout>;
+    reopen?: ReturnType<typeof setTimeout>;
+    /** The user's Sessiz choice. */
+    userMuted: boolean;
+    /** The advisor is speaking: the microphone is off so the loudspeaker does not echo back into it. */
+    advisorSpeaking: boolean;
     closed: boolean;
-  }>({ pending: [], closed: false });
+  }>({ pending: [], userMuted: false, advisorSpeaking: true, closed: false });
+
+  /** The microphone is on only while the advisor is silent and the user has not muted it. */
+  const applyMic = useCallback(() => {
+    const r = refs.current;
+    const track = r.stream?.getAudioTracks()[0];
+    if (track) track.enabled = !r.userMuted && !r.advisorSpeaking;
+  }, []);
+
+  const setAdvisorSpeaking = useCallback(
+    (speaking: boolean) => {
+      const r = refs.current;
+      clearTimeout(r.reopen);
+      if (speaking) {
+        r.advisorSpeaking = true;
+        applyMic();
+      } else {
+        r.reopen = setTimeout(() => {
+          r.advisorSpeaking = false;
+          applyMic();
+        }, MIC_REOPEN_MS);
+      }
+    },
+    [applyMic],
+  );
 
   /** Adds text to a transcript line, creating it in place when it is new. */
   const upsert = useCallback((id: string, role: Line['role'], text: string, replace = false) => {
@@ -64,6 +97,7 @@ export function useAdvisorCall() {
     if (r.closed) return;
     r.closed = true;
     clearTimeout(r.timer);
+    clearTimeout(r.reopen);
     r.stream?.getTracks().forEach((t) => t.stop());
     r.pc?.close();
     try {
@@ -96,10 +130,12 @@ export function useAdvisorCall() {
           upsert(String(e.item_id), 'assistant', String(e.transcript ?? ''), true);
           break;
         case 'output_audio_buffer.started':
+          setAdvisorSpeaking(true);
           setStatus('speaking');
           break;
         case 'output_audio_buffer.stopped':
         case 'output_audio_buffer.cleared':
+          setAdvisorSpeaking(false);
           setStatus('listening');
           break;
         case 'response.function_call_arguments.done':
@@ -124,13 +160,13 @@ export function useAdvisorCall() {
         }
       }
     },
-    [upsert],
+    [upsert, setAdvisorSpeaking],
   );
 
   const start = useCallback(async () => {
     if (!voiceSupported) return;
     // This call's own state: a call that was already closed (screen left while connecting) stops here.
-    const r: typeof refs.current = { pending: [], closed: false };
+    const r: typeof refs.current = { pending: [], userMuted: false, advisorSpeaking: true, closed: false };
     refs.current = r;
     setError(null);
     setLines([]);
@@ -154,6 +190,8 @@ export function useAdvisorCall() {
       const stream = await webrtc.mediaDevices.getUserMedia({ audio: true, video: false });
       r.pc = pc;
       r.stream = stream;
+      // Off during the greeting; output_audio_buffer.stopped opens it.
+      applyMic();
       if (r.closed) {
         stream.getTracks().forEach((t) => t.stop());
         pc.close();
@@ -198,22 +236,38 @@ export function useAdvisorCall() {
       if (r.closed) return;
 
       r.timer = setTimeout(() => stop('ended'), MAX_CALL_MS);
+      r.reopen = setTimeout(() => {
+        r.advisorSpeaking = false;
+        applyMic();
+      }, GREETING_FALLBACK_MS);
     } catch (err) {
       const msg = (err as Error).message;
       setError(/permission|NotAllowed/i.test(msg) ? 'Mikrofon izni gerekli. Ayarlar > Finans bölümünden izin verin.' : msg);
       stop('error');
     }
-  }, [handle, stop]);
+  }, [handle, stop, applyMic]);
+
+  /** Stops the advisor mid-sentence and opens the microphone at once. */
+  const interrupt = useCallback(() => {
+    const r = refs.current;
+    if (!r.advisorSpeaking) return;
+    r.send?.({ type: 'response.cancel' });
+    r.send?.({ type: 'output_audio_buffer.clear' });
+    clearTimeout(r.reopen);
+    r.advisorSpeaking = false;
+    applyMic();
+    setStatus('listening');
+  }, [applyMic]);
 
   const toggleMute = useCallback(() => {
-    const track = refs.current.stream?.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    setMuted(!track.enabled);
-  }, []);
+    const r = refs.current;
+    r.userMuted = !r.userMuted;
+    applyMic();
+    setMuted(r.userMuted);
+  }, [applyMic]);
 
   // Hang up when the screen closes.
   useEffect(() => () => stop('ended'), [stop]);
 
-  return { status, error, lines, muted, start, stop, toggleMute };
+  return { status, error, lines, muted, start, stop, toggleMute, interrupt };
 }

@@ -173,7 +173,8 @@ export async function createRealtimeSecret(apiKey: string, brief: string) {
           input: {
             transcription: { model: "gpt-4o-mini-transcribe", language: "tr" },
             turn_detection: { type: "semantic_vad", eagerness: "medium" },
-            noise_reduction: { type: "near_field" },
+            // The phone is used on the loudspeaker, away from the mouth.
+            noise_reduction: { type: "far_field" },
           },
           output: { voice: REALTIME_VOICE },
         },

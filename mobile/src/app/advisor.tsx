@@ -62,17 +62,31 @@ export default function AdvisorScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.orbArea}>
+          <Pressable
+            style={styles.orbArea}
+            accessibilityRole="button"
+            accessibilityLabel="Danışmanın sözünü kes"
+            disabled={call.status !== 'speaking'}
+            onPress={() => {
+              tap();
+              call.interrupt();
+            }}
+          >
             <Orb status={call.status} />
             <T v="headline" color={C.label} style={{ marginTop: 18 }}>
               {STATUS_TEXT[call.status]}
             </T>
+            {call.status === 'speaking' ? (
+              <T v="caption" color={C.muted} style={{ marginTop: 4 }}>
+                Sözünü kesmek için dokunun
+              </T>
+            ) : null}
             {call.error ? (
               <T v="sub" color={C.red} style={{ marginTop: 6, textAlign: 'center' }}>
                 {call.error}
               </T>
             ) : null}
-          </View>
+          </Pressable>
 
           <ScrollView
             ref={scroll}
@@ -93,6 +107,17 @@ export default function AdvisorScreen() {
             {active ? (
               <>
                 <RoundButton label={call.muted ? 'Mikrofon kapalı' : 'Sessiz'} color={call.muted ? '#FFFFFF' : C.card} text={call.muted ? C.bg : C.label} onPress={call.toggleMute} />
+                {call.status === 'speaking' ? (
+                  <RoundButton
+                    label="Sözü kes"
+                    color={C.card}
+                    text={C.label}
+                    onPress={() => {
+                      tap();
+                      call.interrupt();
+                    }}
+                  />
+                ) : null}
                 <RoundButton label="Bitir" color={C.red} text="#FFFFFF" onPress={close} />
               </>
             ) : (
