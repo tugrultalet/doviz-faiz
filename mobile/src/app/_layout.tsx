@@ -5,11 +5,13 @@ import { Appearance } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useAppStore } from '@/features/store';
+import { useOtaUpdate } from '@/features/updates';
 import { useTheme } from '@/theme';
 
 export default function RootLayout() {
   const t = useTheme();
   const appearance = useAppStore((s) => s.appearance);
+  useOtaUpdate();
 
   // Native controls (tab bar, headers, keyboard) follow the Görünüm choice too. Not on web.
   useEffect(() => {

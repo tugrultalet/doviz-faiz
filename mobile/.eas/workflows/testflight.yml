@@ -1,4 +1,6 @@
-# Every push to the app's branch: an iOS production build on EAS, then upload to TestFlight.
+# Every push to the app's branch (based on Expo's deploy-to-production template):
+# - JavaScript-only change: an over-the-air update on the "production" channel, live in minutes.
+# - Native change (new fingerprint, no build for it yet): an iOS build, then TestFlight.
 # Needs the GitHub repo linked in expo.dev (Project settings → GitHub, base directory: mobile).
 name: TestFlight
 
@@ -7,8 +9,22 @@ on:
     branches: ['claude/sharp-bohr-5bh0us']
 
 jobs:
+  fingerprint:
+    name: Fingerprint
+    type: fingerprint
+
+  get_ios_build:
+    name: Bu native sürüm için build var mı?
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      profile: production
+
   build_ios:
     name: iOS build
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
     type: build
     params:
       platform: ios
@@ -21,3 +37,12 @@ jobs:
     params:
       platform: ios
       build_id: ${{ needs.build_ios.outputs.build_id }}
+
+  publish_ios_update:
+    name: Uzaktan güncelleme (OTA)
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
+    params:
+      branch: production
+      platform: ios
