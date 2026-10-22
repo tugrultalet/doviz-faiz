@@ -1,5 +1,6 @@
 import { Hono, type Context } from "hono";
 import { serveStatic } from "@hono/node-server/serve-static";
+import { FUND_CODE, fetchFundHistory, fetchFundList } from "./funds.js";
 import { fetchGold } from "./gold.js";
 import { fetchIndicators } from "./indicators.js";
 import { fetchDepositRates, fetchFx } from "./sources.js";
@@ -35,6 +36,9 @@ export function createApp(key = process.env.EVDS_API_KEY, { serveFiles = true } 
   const indicators = cached(() => fetchIndicators(key));
   const gold = cached(() => fetchGold(key));
   const stats = cached(() => fetchStats(key));
+  const funds = cached(() => fetchFundList());
+  // One cache entry per fund; small and bounded by the number of funds people open.
+  const fundHistory = new Map<string, () => Promise<Awaited<ReturnType<typeof fetchFundHistory>>>>();
 
   app.get("/api/fx", async (c) => {
     try {
@@ -81,6 +85,41 @@ export function createApp(key = process.env.EVDS_API_KEY, { serveFiles = true } 
         id, section, title, explain, unit, transform, reference, ...byId.get(id),
       })),
     });
+  });
+
+  // TEFAS investment funds: the list for the picker, then 12 months of prices for one fund.
+  app.get("/api/funds", async (c) => {
+    try {
+      const list = await funds();
+      cdnCache(c);
+      return c.json({ source: "TEFAS (Takasbank)", funds: list });
+    } catch (err) {
+      console.error(err);
+      return c.json({ error: "Fon listesi alınamadı. Daha sonra tekrar deneyin." }, 502);
+    }
+  });
+
+  app.get("/api/funds/:code", async (c) => {
+    const code = c.req.param("code").toUpperCase();
+    if (!FUND_CODE.test(code)) return c.json({ error: "Geçersiz fon kodu." }, 400);
+    let load = fundHistory.get(code);
+    if (!load) {
+      load = cached(() => fetchFundHistory(code, 12));
+      fundHistory.set(code, load);
+    }
+    try {
+      const data = await load();
+      if (!data.points.length) {
+        fundHistory.delete(code);
+        return c.json({ error: "Bu fon için fiyat verisi yok." }, 404);
+      }
+      cdnCache(c);
+      return c.json(data);
+    } catch (err) {
+      console.error(err);
+      fundHistory.delete(code);
+      return c.json({ error: "Fon verisi alınamadı. Daha sonra tekrar deneyin." }, 502);
+    }
   });
 
   app.get("/api/indicators", async (c) => {
