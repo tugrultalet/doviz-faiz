@@ -76,3 +76,41 @@ export function returnOverDays(points, days) {
   if (!start) return null;
   return (last.price / start.price - 1) * 100;
 }
+
+/**
+ * Total return curves of several funds on one date axis (the union of their price dates).
+ * A fund without a price on a date gets null there; Chart.js can span the gap.
+ */
+export function alignCurves(histories) {
+  const dates = [...new Set(histories.flatMap((h) => h.points.map((p) => p.date)))].sort();
+  const series = histories.map((h) => {
+    const byDate = new Map(cumulativeCurve(h.points).map((p) => [p.date, p.pct]));
+    return dates.map((d) => byDate.get(d) ?? null);
+  });
+  return { dates, series };
+}
+
+/** Monthly returns of several funds on one month axis; `months` are YYYY-MM keys, newest last. */
+export function alignMonths(histories) {
+  const months = [...new Set(histories.flatMap((h) => h.months.map((m) => m.month)))].sort();
+  const rows = histories.map((h) => {
+    const byMonth = new Map(h.months.map((m) => [m.month, m]));
+    return months.map((k) => byMonth.get(k) ?? null);
+  });
+  return { months, rows };
+}
+
+/** Summary numbers for one fund's 12-month history. */
+export function fundSummary(history) {
+  const pts = history.points;
+  const last = pts.at(-1);
+  const full = history.months.filter((m) => !m.partial);
+  return {
+    total: pts.length > 1 ? (last.price / pts[0].price - 1) * 100 : null,
+    r3m: returnOverDays(pts, 91),
+    r1m: returnOverDays(pts, 30),
+    avgAnnual: full.length ? full.reduce((s, m) => s + m.annualized, 0) / full.length : null,
+    first: pts[0] ?? null,
+    last: last ?? null,
+  };
+}

@@ -61,3 +61,31 @@ describe("curve helpers", () => {
     expect(returnOverDays(pts, 400)).toBeNull();
   });
 });
+
+describe("comparison helpers", () => {
+  const a = { points: [{ date: "2026-01-02", price: 100 }, { date: "2026-01-05", price: 110 }], months: [{ month: "2026-01", pct: 3, partial: false, annualized: 40 }] };
+  const b = { points: [{ date: "2026-01-02", price: 10 }, { date: "2026-01-03", price: 10.5 }], months: [{ month: "2025-12", pct: 2, partial: false, annualized: 30 }, { month: "2026-01", pct: 4, partial: true, annualized: 50 }] };
+
+  it("puts curves on the union of dates with gaps as null", async () => {
+    const { alignCurves } = await import("../public/fundsearch.js");
+    const r = alignCurves([a, b]);
+    expect(r.dates).toEqual(["2026-01-02", "2026-01-03", "2026-01-05"]);
+    expect(r.series[0].map((v) => (v == null ? null : Math.round(v)))).toEqual([0, null, 10]);
+    expect(r.series[1].map((v) => (v == null ? null : Math.round(v)))).toEqual([0, 5, null]);
+  });
+
+  it("puts months on one axis", async () => {
+    const { alignMonths } = await import("../public/fundsearch.js");
+    const r = alignMonths([a, b]);
+    expect(r.months).toEqual(["2025-12", "2026-01"]);
+    expect(r.rows[0][0]).toBeNull();
+    expect(r.rows[1][1].pct).toBe(4);
+  });
+
+  it("summarizes a fund, averaging only full months", async () => {
+    const { fundSummary } = await import("../public/fundsearch.js");
+    const s = fundSummary(b);
+    expect(s.total).toBeCloseTo(5, 6);
+    expect(s.avgAnnual).toBe(30);
+  });
+});

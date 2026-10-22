@@ -53,6 +53,12 @@
         <button type="button" class="combo-toggle" id="combo-toggle" aria-label="Fon listesini aç" tabindex="-1">▾</button>
         <ul class="combo-list" id="fund-options" role="listbox" hidden></ul>
       </div>
+      <div class="compare-bar" id="compare-bar" aria-label="Karşılaştırılan fonlar" hidden>
+        <span class="muted small">Karşılaştır:</span>
+        <ul class="compare-list" id="compare-list"></ul>
+        <button type="button" class="chip add-chip" id="compare-add">+ Fon ekle</button>
+      </div>
+      <p class="muted small compare-hint" id="compare-hint" hidden></p>
     </section>
 
     <div id="fund-view" hidden>
@@ -62,6 +68,16 @@
       </div>
 
       <div class="tiles" id="fund-tiles"></div>
+
+      <section id="compare-section" hidden>
+        <h2>Karşılaştırma</h2>
+        <div class="card">
+          <div class="table-wrap">
+            <table class="returns compare-table" id="compare-table"></table>
+          </div>
+          <p class="muted small">Dönem getirileri toplam getiridir. "Aylık ortalama", tam ayların yıllık eşdeğer ortalamasıdır.</p>
+        </div>
+      </section>
 
       <section>
         <h2>Kazanç eğrisi</h2>

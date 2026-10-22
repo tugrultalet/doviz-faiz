@@ -1,4 +1,4 @@
-import { FUND_TYPES, cumulativeCurve, indexFunds, returnOverDays, searchFunds } from "./fundsearch.js";
+import { FUND_TYPES, alignCurves, alignMonths, fundSummary, indexFunds, searchFunds } from "./fundsearch.js";
 import { revealPage, setupSidebar } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
@@ -21,16 +21,22 @@ const withAlpha = (hex, a) => {
 const shortType = (type) => (type ? type.replace(/ Şemsiye Fonu$/, "") : "Tür bilinmiyor");
 
 const LAST_KEY = "doviz-faiz-last-fund";
+const COMPARE_KEY = "doviz-faiz-compare-funds";
 const DEFAULT_FUND = "FI5";
+const MAX_COMPARE = 2; // plus the main fund: 3 lines at most
+const SERIES_VARS = ["--accent", "--series-eur", "--series-parity"];
 
 let funds = [];
 let index = [];
 let typeId = "all";
 let options = []; // funds now shown in the list
 let active = -1; // highlighted option
-let current = null; // { fund, history }
+let current = null; // { fund, history } of the main fund
+let compare = []; // [{ fund, history }] shown next to the main fund
+let pickFor = "main"; // which slot the search box fills: "main" | "compare"
 let mode = "annualized";
 let requestId = 0;
+const historyCache = new Map(); // code -> Promise of /api/funds/:code
 
 const input = $("fund-search");
 const list = $("fund-options");
@@ -48,37 +54,96 @@ async function loadList() {
   input.disabled = false;
 }
 
-async function selectFund(code, { focusList = false } = {}) {
-  const fund = funds.find((f) => f.code === code) ?? { code, name: code };
-  input.value = `${fund.code} · ${fund.name}`;
-  closeList();
-  if (focusList) input.focus();
+const fundByCode = (code) => funds.find((f) => f.code === code) ?? { code, name: code };
+const mainLabel = () => (current ? `${current.fund.code} · ${current.fund.name}` : "");
+
+function loadHistory(code) {
+  if (!historyCache.has(code)) {
+    const p = fetch(`/api/funds/${encodeURIComponent(code)}`).then(async (res) => {
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Fon verisi alınamadı.");
+      return body;
+    });
+    p.catch(() => historyCache.delete(code)); // let a later try fetch again
+    historyCache.set(code, p);
+  }
+  return historyCache.get(code);
+}
+
+function saveState() {
   try {
-    localStorage.setItem(LAST_KEY, fund.code);
+    if (current) localStorage.setItem(LAST_KEY, current.fund.code);
+    localStorage.setItem(COMPARE_KEY, compare.map((c) => c.fund.code).join(","));
   } catch {
     // private mode
   }
   const url = new URL(location.href);
-  url.searchParams.set("kod", fund.code);
+  if (current) url.searchParams.set("kod", current.fund.code);
+  if (compare.length) url.searchParams.set("karsilastir", compare.map((c) => c.fund.code).join(","));
+  else url.searchParams.delete("karsilastir");
   history.replaceState(null, "", url);
+}
+
+function showError(message) {
+  $("error").textContent = message;
+  $("error").hidden = !message;
+}
+
+async function selectFund(code) {
+  const fund = fundByCode(code);
+  input.value = `${fund.code} · ${fund.name}`;
+  closeList();
+  compare = compare.filter((c) => c.fund.code !== code); // the main fund is not compared with itself
 
   const id = ++requestId;
-  $("error").hidden = true;
+  showError("");
   $("fund-view").classList.add("loading");
   try {
-    const res = await fetch(`/api/funds/${encodeURIComponent(fund.code)}`);
-    const body = await res.json();
+    const body = await loadHistory(fund.code);
     if (id !== requestId) return; // a newer choice is on the way
-    if (!res.ok) throw new Error(body.error ?? "Fon verisi alınamadı.");
     current = { fund: { ...fund, name: body.name ?? fund.name }, history: body };
+    saveState();
     renderFund();
   } catch (err) {
     if (id !== requestId) return;
-    $("error").textContent = err.message;
-    $("error").hidden = false;
+    showError(err.message);
   } finally {
     if (id === requestId) $("fund-view").classList.remove("loading");
   }
+}
+
+async function addCompare(code) {
+  pickFor = "main";
+  input.value = mainLabel();
+  closeList();
+  if (!current || code === current.fund.code || compare.some((c) => c.fund.code === code)) return;
+  if (compare.length >= MAX_COMPARE) return;
+  const fund = fundByCode(code);
+  showError("");
+  $("fund-view").classList.add("loading");
+  try {
+    const body = await loadHistory(code);
+    if (compare.length >= MAX_COMPARE || compare.some((c) => c.fund.code === code)) return;
+    compare.push({ fund: { ...fund, name: body.name ?? fund.name }, history: body });
+    saveState();
+    renderFund();
+  } catch (err) {
+    showError(`${code}: ${err.message}`);
+  } finally {
+    $("fund-view").classList.remove("loading");
+  }
+}
+
+function removeCompare(code) {
+  compare = compare.filter((c) => c.fund.code !== code);
+  saveState();
+  renderFund();
+}
+
+/** Chooses `code` for the slot the search box is filling now. */
+function choose(code) {
+  if (pickFor === "compare") addCompare(code);
+  else selectFund(code);
 }
 
 // ---- Type filter ----
@@ -103,7 +168,10 @@ $("fund-types").addEventListener("click", (e) => {
 
 function renderOptions() {
   const query = input.value.includes(" · ") ? "" : input.value; // the chosen fund's label is not a search
-  const { total, items } = searchFunds(index, query, { typeId });
+  const taken = new Set(pickFor === "compare" ? [current?.fund.code, ...compare.map((c) => c.fund.code)] : []);
+  const found = searchFunds(index, query, { typeId, limit: 60 + taken.size });
+  const items = found.items.filter((f) => !taken.has(f.code)).slice(0, 60);
+  const total = found.total - [...taken].filter((c) => found.items.some((f) => f.code === c)).length;
   options = items;
   if (active >= options.length) active = options.length - 1;
   if (!items.length) {
@@ -154,6 +222,17 @@ input.addEventListener("focus", () => {
   input.select();
   openList();
 });
+input.addEventListener("blur", () => {
+  // Leaving the box without a choice: show the main fund again.
+  setTimeout(() => {
+    if (document.activeElement === input) return;
+    if (pickFor === "compare") {
+      pickFor = "main";
+      renderCompareBar();
+    }
+    if (list.hidden && current) input.value = mainLabel();
+  }, 0);
+});
 input.addEventListener("input", () => {
   if (list.hidden) openList();
   active = 0;
@@ -171,12 +250,14 @@ input.addEventListener("keydown", (e) => {
   } else if (e.key === "Enter") {
     if (!list.hidden && options[active]) {
       e.preventDefault();
-      selectFund(options[active].code);
+      choose(options[active].code);
       input.blur();
     }
   } else if (e.key === "Escape") {
     closeList();
-    if (current) input.value = `${current.fund.code} · ${current.fund.name}`;
+    pickFor = "main";
+    input.value = mainLabel();
+    renderCompareBar();
   }
 });
 // pointerdown, not click: choose before the input loses focus and closes the list.
@@ -184,7 +265,7 @@ list.addEventListener("pointerdown", (e) => {
   const li = e.target.closest("[data-code]");
   if (!li) return;
   e.preventDefault();
-  selectFund(li.dataset.code);
+  choose(li.dataset.code);
   input.blur();
 });
 $("combo-toggle").addEventListener("click", () => {
@@ -199,21 +280,104 @@ document.addEventListener("pointerdown", (e) => {
   if (!$("combo").contains(e.target) && !$("fund-types").contains(e.target)) {
     if (!list.hidden) {
       closeList();
-      if (current) input.value = `${current.fund.code} · ${current.fund.name}`;
+      pickFor = "main";
+      input.value = mainLabel();
+      renderCompareBar();
     }
   }
 });
 
 // ---- Fund view ----
 
+// ---- Compare bar ----
+
+const seriesColor = (i) => cssVar(SERIES_VARS[i % SERIES_VARS.length]);
+const shown = () => (current ? [current, ...compare] : []);
+
+function renderCompareBar() {
+  const bar = $("compare-bar");
+  bar.hidden = !current;
+  if (!current) return;
+  const chips = shown()
+    .map((s, i) => {
+      const swatch = `<span class="swatch" style="background:${seriesColor(i)}"></span>`;
+      const remove = i === 0 ? "" : `<button type="button" class="chip-x" data-remove="${escapeHtml(s.fund.code)}" aria-label="${escapeHtml(s.fund.code)} karşılaştırmadan çıkar">×</button>`;
+      return `<li class="compare-chip${i === 0 ? " main" : ""}" title="${escapeHtml(s.fund.name)}">${swatch}${escapeHtml(s.fund.code)}${remove}</li>`;
+    })
+    .join("");
+  $("compare-list").innerHTML = chips;
+  const add = $("compare-add");
+  add.hidden = compare.length >= MAX_COMPARE;
+  add.setAttribute("aria-pressed", String(pickFor === "compare"));
+  const hint = $("compare-hint");
+  hint.hidden = pickFor !== "compare";
+  hint.textContent = "Karşılaştırmak için yukarıdan bir fon seçin.";
+  input.placeholder = pickFor === "compare" ? "Karşılaştırılacak fonu arayın" : "Fon kodu veya adı yazın (ör. FI5, para piyasası)";
+}
+
+$("compare-list").addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-remove]");
+  if (btn) removeCompare(btn.dataset.remove);
+});
+
+// pointerdown keeps the focus in the search box (a click would blur it first).
+$("compare-add").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  pickFor = "compare";
+  renderCompareBar();
+  input.value = "";
+  input.focus();
+  openList();
+});
+$("compare-add").addEventListener("click", () => {
+  // keyboard activation
+  if (pickFor === "compare") return;
+  pickFor = "compare";
+  renderCompareBar();
+  input.value = "";
+  input.focus();
+  openList();
+});
+
+// ---- Fund view ----
+
+function renderCompareTable() {
+  const section = $("compare-section");
+  section.hidden = !compare.length;
+  if (!compare.length) return;
+  const items = shown().map((s) => ({ ...s, sum: fundSummary(s.history) }));
+  const best = (get) => {
+    const vals = items.map(get).filter((v) => v != null);
+    return vals.length ? Math.max(...vals) : null;
+  };
+  const row = (label, get, fmt, mark = true) => {
+    const top = mark ? best(get) : null;
+    return `<tr><th scope="row">${label}</th>${items
+      .map((it) => {
+        const v = get(it);
+        return `<td class="${mark && v != null && v === top ? "best" : ""}">${v == null ? "–" : fmt(v)}</td>`;
+      })
+      .join("")}</tr>`;
+  };
+  const head = items
+    .map((it, i) => `<th title="${escapeHtml(it.fund.name)}"><span class="swatch" style="background:${seriesColor(i)}"></span>${escapeHtml(it.fund.code)}</th>`)
+    .join("");
+  $("compare-table").innerHTML = `<thead><tr><th></th>${head}</tr></thead><tbody>
+    ${row("Son 12 ay", (it) => it.sum.total, (v) => fmtPct(v, 1))}
+    ${row("Son 3 ay", (it) => it.sum.r3m, (v) => fmtPct(v, 1))}
+    ${row("Son 1 ay", (it) => it.sum.r1m, (v) => fmtPct(v, 2))}
+    ${row("Aylık ortalama", (it) => it.sum.avgAnnual, (v) => `%${nf(1).format(v)}`)}
+    ${row("Risk değeri", (it) => it.fund.risk, (v) => `${v} / 7`, false)}
+    ${row("Büyüklük", (it) => it.fund.size, (v) => `${compactTl.format(v)} TL`, false)}
+    <tr><th scope="row">Tür</th>${items.map((it) => `<td class="type-cell">${escapeHtml(shortType(it.fund.type))}</td>`).join("")}</tr>
+  </tbody>`;
+}
+
 function renderFund() {
   const { fund, history } = current;
   const pts = history.points;
   const last = pts.at(-1);
-  const total = pts.length > 1 ? (last.price / pts[0].price - 1) * 100 : null;
-  const months = history.months;
-  const full = months.filter((m) => !m.partial);
-  const avgAnnual = full.length ? full.reduce((s, m) => s + m.annualized, 0) / full.length : null;
+  const { total, r3m, r1m, avgAnnual } = fundSummary(history);
 
   $("fund-view").hidden = false;
   $("fund-name").textContent = `${fund.code} · ${fund.name}`;
@@ -222,26 +386,31 @@ function renderFund() {
   const tile = (title, value, note) => `<div class="tile"><h3>${title}</h3><div class="value">${value}</div><p>${note}</p></div>`;
   $("fund-tiles").innerHTML = [
     tile("Son 12 ay", fmtPct(total, 1), `${fmtDate(pts[0]?.date)} – ${fmtDate(last?.date)}`),
-    tile("Son 3 ay", fmtPct(returnOverDays(pts, 91), 1), "toplam getiri"),
-    tile("Son 1 ay", fmtPct(returnOverDays(pts, 30), 2), "toplam getiri"),
+    tile("Son 3 ay", fmtPct(r3m, 1), "toplam getiri"),
+    tile("Son 1 ay", fmtPct(r1m, 2), "toplam getiri"),
     tile("Aylık ortalama", avgAnnual == null ? "–" : `%${nf(1).format(avgAnnual)}`, "tam ayların yıllık eşdeğer ortalaması"),
     tile("Risk değeri", fund.risk ? `${fund.risk} <span class="small muted">/ 7</span>` : "–", fund.risk ? "SPK ölçeği" : "TEFAS'ta yayımlanmıyor"),
     tile("Büyüklük", fund.size ? `${compactTl.format(fund.size)} <span class="small">TL</span>` : "–", fund.investors ? `${nf(0).format(fund.investors)} yatırımcı` : "portföy değeri"),
     tile("Son fiyat", fmtPrice(last?.price), fmtDate(last?.date)),
   ].join("");
 
+  renderCompareBar();
+  renderCompareTable();
   renderCurve();
   renderMonths();
   revealPage();
 }
 
-const baseOptions = (format) => {
+const baseOptions = (format, legend = false) => {
   const text = cssVar("--text-secondary");
   return {
     maintainAspectRatio: false,
     animation: { duration: 250 },
     interaction: { mode: "index", intersect: false },
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => format(c.parsed.y) } } },
+    plugins: {
+      legend: { display: legend, position: "bottom", labels: { color: text, boxWidth: 10, boxHeight: 10, useBorderRadius: true, borderRadius: 2 } },
+      tooltip: { callbacks: { label: (c) => (c.parsed.y == null ? null : `${legend ? `${c.dataset.label}: ` : ""}${format(c.parsed.y)}`) } },
+    },
     scales: {
       x: { ticks: { color: text, maxTicksLimit: 7, maxRotation: 0 }, grid: { display: false } },
       y: { ticks: { color: text, callback: (v) => format(v) }, grid: { color: cssVar("--grid") } },
@@ -251,19 +420,39 @@ const baseOptions = (format) => {
 
 function renderCurve() {
   Chart.getChart($("fund-curve"))?.destroy();
-  const curve = cumulativeCurve(current.history.points);
-  const accent = cssVar("--accent");
+  const items = shown();
+  const { dates, series } = alignCurves(items.map((s) => s.history));
+  const many = items.length > 1;
   new Chart($("fund-curve"), {
     type: "line",
     data: {
-      labels: curve.map((p) => fmtDate(p.date)),
-      datasets: [{ data: curve.map((p) => p.pct), borderColor: accent, backgroundColor: accent, borderWidth: 2, pointRadius: 0, pointHoverRadius: 4, tension: 0.15 }],
+      labels: dates.map(fmtDate),
+      datasets: items.map((s, i) => ({
+        label: s.fund.code,
+        data: series[i],
+        borderColor: seriesColor(i),
+        backgroundColor: seriesColor(i),
+        borderWidth: i === 0 ? 2.5 : 2,
+        pointRadius: 0,
+        pointHoverRadius: 4,
+        tension: 0.15,
+        spanGaps: true,
+      })),
     },
-    options: baseOptions((v) => `%${nf(1).format(v)}`),
+    options: baseOptions((v) => `%${nf(1).format(v)}`, many),
   });
-  const lastPct = curve.at(-1)?.pct;
-  $("curve-note").textContent =
-    lastPct == null ? "" : `${fmtDate(curve[0].date)} tarihinde yatırılan 100 TL, ${fmtDate(curve.at(-1).date)} tarihinde ${nf(2).format(100 + lastPct)} TL olur.`;
+  const notes = items.map((s) => {
+    const { first, last } = fundSummary(s.history);
+    return first && last ? { code: s.fund.code, first, last, value: (100 * last.price) / first.price } : null;
+  }).filter(Boolean);
+  if (!notes.length) {
+    $("curve-note").textContent = "";
+  } else if (!many) {
+    const n = notes[0];
+    $("curve-note").textContent = `${fmtDate(n.first.date)} tarihinde yatırılan 100 TL, ${fmtDate(n.last.date)} tarihinde ${nf(2).format(n.value)} TL olur.`;
+  } else {
+    $("curve-note").textContent = `${fmtDate(notes[0].first.date)} tarihinde yatırılan 100 TL bugün: ${notes.map((n) => `${n.code} ${nf(2).format(n.value)} TL`).join(" · ")}.`;
+  }
 }
 
 /**
@@ -283,20 +472,54 @@ function monthAxis(options, values) {
 
 function renderMonths() {
   Chart.getChart($("fund-months"))?.destroy();
-  const months = current.history.months;
-  const accent = cssVar("--accent");
-  const faded = withAlpha(accent, 0.4);
+  const items = shown();
+  const many = items.length > 1;
   const key = mode === "annualized" ? "annualized" : "pct";
+  const { months, rows: byFund } = alignMonths(items.map((s) => s.history));
+  const partialMonth = (k) => byFund.some((r) => r[months.indexOf(k)]?.partial);
   new Chart($("fund-months"), {
     type: "bar",
     data: {
-      labels: months.map((m) => fmtMonth(m.month) + (m.partial ? "*" : "")),
-      datasets: [{ data: months.map((m) => m[key]), backgroundColor: months.map((m) => (m.partial ? faded : accent)), borderRadius: 4, maxBarThickness: 36 }],
+      labels: months.map((k) => fmtMonth(k) + (partialMonth(k) ? "*" : "")),
+      datasets: items.map((s, i) => {
+        const color = seriesColor(i);
+        return {
+          label: s.fund.code,
+          data: byFund[i].map((m) => (m ? m[key] : null)),
+          backgroundColor: byFund[i].map((m) => (m?.partial ? withAlpha(color, 0.4) : color)),
+          borderRadius: 4,
+          maxBarThickness: many ? 16 : 36,
+        };
+      }),
     },
-    options: monthAxis(baseOptions((v) => `%${nf(mode === "annualized" ? 1 : 2).format(v)}`), months.map((m) => m[key])),
+    options: monthAxis(
+      baseOptions((v) => `%${nf(mode === "annualized" ? 1 : 2).format(v)}`, many),
+      byFund.flat().filter(Boolean).map((m) => m[key]),
+    ),
   });
 
-  const rows = months
+  if (many) {
+    const digits = mode === "annualized" ? 1 : 2;
+    const fmt = (m) => (m == null ? "–" : mode === "annualized" ? `%${nf(digits).format(m.annualized)}` : fmtPct(m.pct, digits));
+    const head = items.map((s, i) => `<th><span class="swatch" style="background:${seriesColor(i)}"></span>${escapeHtml(s.fund.code)}</th>`).join("");
+    const body = months
+      .map((k, j) => ({ k, j }))
+      .reverse()
+      .map(({ k, j }) => {
+        const vals = byFund.map((r) => r[j]);
+        const nums = vals.filter(Boolean).map((m) => m[key]);
+        const top = nums.length > 1 ? Math.max(...nums) : null;
+        return `<tr><th scope="row">${fmtMonth(k)}${partialMonth(k) ? `<span class="sub">ay bitmedi</span>` : ""}</th>${vals
+          .map((m) => `<td class="${m && m[key] === top ? "best" : ""}">${fmt(m)}</td>`)
+          .join("")}</tr>`;
+      })
+      .join("");
+    $("month-table").innerHTML = `<thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody>`;
+    return;
+  }
+
+  const singleMonths = current.history.months;
+  const rows = singleMonths
     .slice()
     .reverse()
     .map(
@@ -331,15 +554,19 @@ renderTypes();
 (async () => {
   try {
     await loadList();
-    let start = new URL(location.href).searchParams.get("kod")?.toUpperCase();
-    if (!start) {
-      try {
-        start = localStorage.getItem(LAST_KEY);
-      } catch {
-        // private mode
-      }
+    // Read both saved choices first: choosing the main fund saves the state again.
+    const params = new URL(location.href).searchParams;
+    let start = params.get("kod")?.toUpperCase();
+    let extra = params.get("karsilastir");
+    try {
+      start ??= localStorage.getItem(LAST_KEY);
+      if (!params.has("kod")) extra ??= localStorage.getItem(COMPARE_KEY);
+    } catch {
+      // private mode
     }
     await selectFund(start && funds.some((f) => f.code === start) ? start : DEFAULT_FUND);
+    const codes = (extra ?? "").toUpperCase().split(",").filter((c) => c && funds.some((f) => f.code === c));
+    for (const c of codes.slice(0, MAX_COMPARE)) await addCompare(c);
   } catch (err) {
     $("error").textContent = err.message;
     $("error").hidden = false;
