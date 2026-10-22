@@ -67,6 +67,11 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
-    "owner": "tgrltl"
+    "owner": "tgrltl",
+    "extra": {
+      "eas": {
+        "projectId": "05f2ef35-e07a-4e02-995b-9ba7d99d467b"
+      }
+    }
   }
 }
