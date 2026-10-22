@@ -23,6 +23,12 @@ Ana ekran widget'ı Expo Go'da görünmez; onun için TestFlight sürümü gerek
 
 ## TestFlight
 
+**Otomatik:** `claude/sharp-bohr-5bh0us` dalına yapılan her gönderimde EAS Workflows iOS build'ini alır ve
+TestFlight'a gönderir (`.eas/workflows/testflight.yml`). İlerleme: expo.dev → finans → Workflows.
+Repo, expo.dev'de `mobile` temel klasörüyle bağlıdır.
+
+**Elle** (gerekirse):
+
 ```bash
 npx eas-cli@latest login            # Expo hesabı (tgrltl)
 npx eas-cli@latest init             # ilk sefer: EAS proje kimliğini app.json'a yazar
