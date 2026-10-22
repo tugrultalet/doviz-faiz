@@ -1,0 +1,23 @@
+# Every push to the app's branch: an iOS production build on EAS, then upload to TestFlight.
+# Needs the GitHub repo linked in expo.dev (Project settings → GitHub, base directory: mobile).
+name: TestFlight
+
+on:
+  push:
+    branches: ['claude/sharp-bohr-5bh0us']
+
+jobs:
+  build_ios:
+    name: iOS build
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  submit_ios:
+    name: TestFlight'a gönder
+    needs: [build_ios]
+    type: submit
+    params:
+      platform: ios
+      build_id: ${{ needs.build_ios.outputs.build_id }}
